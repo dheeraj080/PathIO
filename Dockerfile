@@ -1,49 +1,46 @@
-# ---- build stage ----
-FROM eclipse-temurin:25-jdk-alpine AS builder
-WORKDIR /app
+# ==============================================================================
+# Stage 1: Build the Quarkus Application
+# ==============================================================================
+FROM eclipse-temurin:25-jdk-alpine AS build
+WORKDIR /code
 
-COPY mvnw .
-COPY .mvn .mvn
-COPY pom.xml .
+# Copy Gradle wrapper & dependency definitions
+COPY gradle /code/gradle
+COPY gradlew build.gradle settings.gradle /code/
 
-RUN sed -i 's/\r$//' mvnw
-RUN chmod +x ./mvnw
-RUN ./mvnw dependency:go-offline -B
+# Grant execute permissions to the wrapper
+RUN chmod +x gradlew
 
-COPY src src
-RUN ./mvnw clean package -DskipTests
+# Download dependencies (cached layer unless build configurations change)
+RUN ./gradlew dependencies --no-daemon || true
 
-RUN java -Djarmode=layertools -jar target/*.jar extract --destination target/extracted
+# Copy source code and build the Fast-JAR
+COPY src /code/src
+RUN ./gradlew build -x test --no-daemon
 
-# ---- runtime stage ----
-FROM eclipse-temurin:25-jre-alpine AS runtime
-WORKDIR /app
+# ==============================================================================
+# Stage 2: Minimal Java 25 Runtime Image
+# ==============================================================================
+FROM eclipse-temurin:25-jre-alpine
+WORKDIR /deployments
 
-# Install network debugging tools
-RUN apk add --no-cache bind-tools iputils
+# Configure Quarkus JVM parameters
+ENV LANGUAGE='en_US:en'
 
-# Ensure we have a system group/users
-RUN addgroup -S spring && adduser -S spring -G spring
+# Create app directory and non-root system user
+RUN mkdir -p /deployments \
+    && addgroup -S quarkus && adduser -S quarkus -G quarkus \
+    && chown -R quarkus:quarkus /deployments
 
-# ===== ADD THIS SECTION =====
-# Create storage directory with proper permissions BEFORE switching to spring user
-RUN mkdir -p /app/storage/scheduled_attachments && \
-    chown -R spring:spring /app/storage && \
-    chmod -R 755 /app/storage
-# ============================
+# Copy Quarkus Fast-JAR artifacts from build stage
+COPY --chown=quarkus:quarkus --from=build /code/build/quarkus-app/lib/ /deployments/lib/
+COPY --chown=quarkus:quarkus --from=build /code/build/quarkus-app/*.jar /deployments/
+COPY --chown=quarkus:quarkus --from=build /code/build/quarkus-app/app/ /deployments/app/
+COPY --chown=quarkus:quarkus --from=build /code/build/quarkus-app/quarkus/ /deployments/quarkus/
 
-# Copying layers
-COPY --from=builder --chown=spring:spring /app/target/extracted/dependencies/ ./
-COPY --from=builder --chown=spring:spring /app/target/extracted/spring-boot-loader/ ./
-COPY --from=builder --chown=spring:spring /app/target/extracted/snapshot-dependencies/ ./
-COPY --from=builder --chown=spring:spring /app/target/extracted/application/ ./
+USER quarkus
 
-USER spring:spring
+EXPOSE 8080
 
-# Updated to 5000 to match Compose file
-EXPOSE 5000
-
-ENTRYPOINT ["java", \
-  "-XX:TieredStopAtLevel=1", \
-  "-XX:+UseContainerSupport", \
-  "org.springframework.boot.loader.launch.JarLauncher"]
+# Execute Quarkus directly to handle shutdown signals properly (PID 1)
+ENTRYPOINT ["java", "-Dquarkus.http.host=0.0.0.0", "-Djava.util.logging.manager=org.jboss.logmanager.LogManager", "-jar", "/deployments/quarkus-run.jar"]
