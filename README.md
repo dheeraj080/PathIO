@@ -1,87 +1,142 @@
-# pathio
+# Chapter 8: Design a URL Shortener
 
-This project uses Quarkus, the Supersonic Subatomic Java Framework.
+## Introduction
+This chapter discusses the design of a URL shortening service like TinyURL. The system's main goals include **URL shortening**, **redirecting**, and **high scalability** to handle large traffic volumes.
 
-If you want to learn more about Quarkus, please visit its website: <https://quarkus.io/>.
+### Requirements
+- Shortened URLs must be **unique** and as **short as possible**.
+- Handle **100 million URL generations per day** with a 10-year support capacity.
+- Support **efficient read operations** with a 10:1 read-to-write ratio.
+- Store 365 billion records, requiring approximately **365 TB** of storage over 10 years.
 
-## Running the application in dev mode
+---
 
-You can run your application in dev mode that enables live coding using:
+## Step 1: High-Level Design
 
-```shell script
-./mvnw quarkus:dev
-```
+### API Endpoints
+1. **URL Shortening:**  
+   - Endpoint: `POST api/v1/data/shorten`  
+   - Parameters: `{longUrl: longURLString}`  
+   - Returns: `shortURL`
 
-> **_NOTE:_**  Quarkus now ships with a Dev UI, which is available in dev mode only at <http://localhost:8080/q/dev/>.
+2. **URL Redirecting:**  
+   - Endpoint: `GET api/v1/shortUrl`  
+   - Returns: `longURL` for redirection.
 
-## Packaging and running the application
+    <p align="center">
+    <img src="./images/url-redirection.png" alt="URL Redirection" width="600">
+    </p>
 
-The application can be packaged using:
+### URL Redirection
+- **301 Redirect:**  A 301 redirect shows that the requested URL is “permanently” moved to the long URL. The browser caches the response, and
+subsequent requests for the same URL will not be sent to the URL shortening service.
+- **302 Redirect:** Temporary; useful for analytics like tracking clicks.
 
-```shell script
-./mvnw package
-```
+### URL Shortening
+<p align="center">
+    <img src="./images/url-shortening.png" alt="URL Shortening" width="400">
+</p>
 
-It produces the `quarkus-run.jar` file in the `target/quarkus-app/` directory.
-Be aware that it’s not an _über-jar_ as the dependencies are copied into the `target/quarkus-app/lib/` directory.
+- Use a **hash function** to generate a short URL, mapping long URLs to unique shortened versions.
+- The hash function must satisfy the following requirements:
+    - Each longURL must be hashed to one hashValue.
+    - Each hashValue can be mapped back to the longURL.
+    
 
-The application is now runnable using `java -jar target/quarkus-app/quarkus-run.jar`.
+---
 
-If you want to build an _über-jar_, execute the following command:
+## Step 2: Deep Dive into Design
 
-```shell script
-./mvnw package -Dquarkus.package.jar.type=uber-jar
-```
+### Data Model
+Store `<shortURL, longURL>` mappings in a relational database to optimize memory usage. The table schema includes:
+- `id` (primary key),
+- `shortURL`,
+- `longURL`.
 
-The application, packaged as an _über-jar_, is now runnable using `java -jar target/*-runner.jar`.
+    <img src="./images/table-schema.png" alt="Table Schema" width="300">
 
-## Creating a native executable
+### Hash Function
+#### 1. Base 62 Conversion:
+- Encodes numbers using characters `[0-9, a-z, A-Z]`, providing **62 possible characters**.
+- Base conversion is another approach commonly used for URL shorteners. 
+- A unique id can be assigned to the short url and ID can be base 62 converted to get the short URL.
+- A 7-character hash supports up to **3.5 trillion unique URLs**, enough for 365 billion URLs.
 
-You can create a native executable using:
+**Example:**  
+Convert ID `2009215674938` to Base 62:
+- `2009215674938` → `zn9edcu`.
 
-```shell script
-./mvnw package -Dnative
-```
+#### 2. Hash + Collision Resolution:
+- Use hash functions like CRC32, MD5, or SHA-1.
 
-Or, if you don't have GraalVM installed, you can run the native executable build in a container using:
+    <img src="./images/hash-function.png" alt="Hash Function" width="500">
 
-```shell script
-./mvnw package -Dnative -Dquarkus.native.container-build=true
-```
+- One approach is to collect the first 7 characters of a hash value; however, this method can lead to hash collisions.
+- To resolve collisions,recursively append a new predefined string until no more collision but this can be expensive.
+- Resolve collisions with **Bloom Filters** for efficient lookup.
 
-You can then execute your native executable with: `./target/pathio-1.0.0-SNAPSHOT-runner`
+    <p align="center">
+    <img src="./images/url-lookup.png" alt="URL Lookup" width="500">
+    </p>
 
-If you want to learn more about building native executables, please consult <https://quarkus.io/guides/maven-tooling>.
+### Comparison
 
-## Related Guides
+-  **Hash + Collision Resolution:**
+    - Fixed short URL length
+    - Does not need a unique ID generator
+    - Collision is possbile and needs resolution
+    - Not possible to find the next available short URL because it does not depend on ID
 
-- REST resources for Hibernate ORM with Panache ([guide](https://quarkus.io/guides/rest-data-panache)): Generate Jakarta REST resources for your Hibernate Panache entities and repositories
-- Flyway ([guide](https://quarkus.io/guides/flyway)): Handle your database schema migrations
-- REST Jackson ([guide](https://quarkus.io/guides/rest#json-serialisation)): Jackson serialization support for Quarkus REST. This extension is not compatible with the quarkus-resteasy extension, or any of the extensions that depend on it
-- Hibernate ORM with Panache ([guide](https://quarkus.io/guides/hibernate-orm-panache)): Simplify your persistence code for Hibernate ORM via the active record or the repository pattern
-- JDBC Driver - PostgreSQL ([guide](https://quarkus.io/guides/datasource)): Connect to the PostgreSQL database via JDBC
-
-## Provided Code
-
-### Hibernate ORM
-
-Create your first JPA entity
-
-[Related guide section...](https://quarkus.io/guides/hibernate-orm)
-
-
-[Related Hibernate with Panache section...](https://quarkus.io/guides/hibernate-orm-panache)
-
-
-### REST Data with Panache
-
-Generating Jakarta REST resources with Panache
-
-[Related guide section...](https://quarkus.io/guides/rest-data-panache)
+- **Base 62 Conversion**
+    - The length is not fixed and goes up with ID
+    - It needs a unique ID generator
+    - Collision is not possbile
+    - Easy to find the next short URL if ID increments by 1 (Can be a security concern)
 
 
-### REST
+---
 
-Easily start your REST Web Services
+### URL Shortening Flow
 
-[Related guide section...](https://quarkus.io/guides/getting-started-reactive#reactive-jax-rs-resources)
+<p align="center">
+    <img src="./images/url-shortening-flow.png" alt="URL Shortening" width="500">
+</p>
+
+1. Check if `longURL` exists in the database.
+2. If found, return the existing `shortURL`.
+3. Otherwise:
+   - Generate a unique ID using a **distributed ID generator**.
+   - Convert the ID to `shortURL` using Base 62.
+   - Store the `<id, shortURL, longURL>` mapping in the database.
+
+
+
+---
+
+### URL Redirecting Flow
+<p align="center">
+    <img src="./images/url-redirecting-flow.png" alt="URL Shortening" width="600">
+</p>
+
+1. User clicks a `shortURL`.
+2. Query `<shortURL, longURL>` mapping:
+   - Check the **cache** first for faster access.
+   - If not in the cache, query the database.
+3. Redirect the user to `longURL`.
+
+
+---
+
+## Additional Considerations
+### Rate Limiter
+- Prevent abuse by setting limits on requests per IP.
+
+### Scalability
+1. **Web Tier:** Stateless, scalable by adding/removing web servers.
+2. **Database Tier:** Use replication and sharding.
+
+### Analytics
+- Collect data like click rates, source, and timestamps for business insights.
+
+### High Availability and Reliability
+- Ensure consistent and reliable services using database replication and fault-tolerant design.
