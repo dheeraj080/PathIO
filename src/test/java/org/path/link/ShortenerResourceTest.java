@@ -1,4 +1,4 @@
-package org.path;
+package org.path.link;
 
 import io.quarkus.test.junit.QuarkusTest;
 import io.restassured.http.ContentType;
@@ -72,7 +72,7 @@ class ShortenerResourceTest {
                 .get("/" + key)
                 .then()
                 // Match status configured in resource (301 or 302)
-                .statusCode(301)
+                .statusCode(302)
                 .header("Location", equalTo(targetUrl));
     }
 

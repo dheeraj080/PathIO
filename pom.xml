@@ -65,6 +65,14 @@
             <version>${datastax-driver.version}</version>
         </dependency>
 
+        <!-- Source: https://mvnrepository.com/artifact/com.datastax.oss.quarkus/cassandra-quarkus-client -->
+        <dependency>
+            <groupId>com.datastax.oss.quarkus</groupId>
+            <artifactId>cassandra-quarkus-client</artifactId>
+            <version>1.4.1</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- 4. Hot-Key Origin Cache (Redis) -->
         <dependency>
             <groupId>io.quarkus</groupId>
@@ -119,6 +127,21 @@
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-hibernate-validator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>javax</groupId>
+            <artifactId>javaee-api</artifactId>
+            <version>8.0.1</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Source: https://mvnrepository.com/artifact/org.assertj/assertj-core -->
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <version>3.27.7</version>
+            <scope>test</scope>
         </dependency>
 
     </dependencies>

@@ -1,4 +1,4 @@
-package org.path;
+package org.path.link;
 
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -48,9 +48,16 @@ public class ShortenerResource {
     @Path("/{key}")
     public Response redirect(@PathParam("key") String key) {
         return service.getOriginalUrl(key)
-                .map(url -> Response.status(Response.Status.MOVED_PERMANENTLY) // 301 for SEO/Caching or 302 (FOUND)
+                .map(url -> Response.status(Response.Status.FOUND) // 301 for SEO/Caching or 302 (FOUND)
                         .location(URI.create(url))
                         .build())
                 .orElseGet(() -> Response.status(Response.Status.NOT_FOUND).build());
     }
+
+//    @Asynchronous // Requires quarkus-arc async support, or use Mutiny/Reactive
+//    public void recordClick(String key) {
+//
+//    }
+
 }
+

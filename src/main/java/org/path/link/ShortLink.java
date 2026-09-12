@@ -1,4 +1,4 @@
-package org.path;
+package org.path.link;
 
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
