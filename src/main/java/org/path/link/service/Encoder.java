@@ -1,4 +1,4 @@
-package org.path.link;
+package org.path.link.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
 

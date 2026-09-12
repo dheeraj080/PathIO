@@ -16,6 +16,7 @@
         <quarkus.platform.version>3.33.3.2</quarkus.platform.version>
         <skipITs>true</skipITs>
         <surefire-plugin.version>3.5.4</surefire-plugin.version>
+        <datastax-quarkus.version>1.4.1</datastax-quarkus.version>
         <datastax-driver.version>4.17.0</datastax-driver.version>
     </properties>
 
@@ -32,7 +33,7 @@
     </dependencyManagement>
 
     <dependencies>
-        <!-- 1. REST & JSON API (Replaces standalone rest & jackson dependencies) -->
+        <!-- 1. REST & JSON API -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-rest-jackson</artifactId>
@@ -52,25 +53,16 @@
             <artifactId>quarkus-flyway</artifactId>
         </dependency>
 
-        <!-- Auto-generate CRUD REST endpoints from Panache Entities (Optional) -->
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-hibernate-orm-rest-data-panache</artifactId>
-        </dependency>
-
-        <!-- 3. Key-Value Lookup Store (ScyllaDB / Cassandra Driver) -->
-        <dependency>
-            <groupId>com.datastax.oss</groupId>
-            <artifactId>java-driver-core</artifactId>
-            <version>${datastax-driver.version}</version>
-        </dependency>
-
-        <!-- Source: https://mvnrepository.com/artifact/com.datastax.oss.quarkus/cassandra-quarkus-client -->
+        <!-- 3. Key-Value Lookup Store (Cassandra / ScyllaDB Driver) -->
         <dependency>
             <groupId>com.datastax.oss.quarkus</groupId>
             <artifactId>cassandra-quarkus-client</artifactId>
-            <version>1.4.1</version>
-            <scope>compile</scope>
+            <version>${datastax-quarkus.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.datastax.oss</groupId>
+            <artifactId>java-driver-mapper-runtime</artifactId>
+            <version>${datastax-driver.version}</version>
         </dependency>
 
         <!-- 4. Hot-Key Origin Cache (Redis) -->
@@ -85,10 +77,18 @@
             <artifactId>quarkus-messaging-kafka</artifactId>
         </dependency>
 
-        <!-- CDI Context & Dependency Injection -->
+        <!-- Utilities & Validation -->
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-arc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.quarkus</groupId>
+            <artifactId>quarkus-hibernate-validator</artifactId>
         </dependency>
 
         <!-- Testing Dependencies -->
@@ -102,48 +102,23 @@
             <artifactId>rest-assured</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-cache</artifactId>
-            <version>3.39.2</version>
-            <scope>compile</scope>
-        </dependency>
-
-        <!-- Source: https://mvnrepository.com/artifact/org.hibernate.validator/hibernate-validator -->
-        <dependency>
-            <groupId>org.hibernate.validator</groupId>
-            <artifactId>hibernate-validator</artifactId>
-            <version>9.1.3.Final</version>
-            <scope>compile</scope>
-        </dependency>
-
         <dependency>
             <groupId>io.quarkus</groupId>
             <artifactId>quarkus-jdbc-h2</artifactId>
             <scope>test</scope>
         </dependency>
-
-        <dependency>
-            <groupId>io.quarkus</groupId>
-            <artifactId>quarkus-hibernate-validator</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>javax</groupId>
-            <artifactId>javaee-api</artifactId>
-            <version>8.0.1</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <!-- Source: https://mvnrepository.com/artifact/org.assertj/assertj-core -->
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
             <version>3.27.7</version>
             <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>cassandra</artifactId>
+            <version>1.21.4</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -164,10 +139,23 @@
                 </executions>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${compiler-plugin.version}</version>
                 <configuration>
                     <parameters>true</parameters>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>com.datastax.oss.quarkus</groupId>
+                            <artifactId>cassandra-quarkus-mapper-processor</artifactId>
+                            <version>${datastax-quarkus.version}</version>
+                        </path>
+                        <path>
+                            <groupId>com.datastax.oss</groupId>
+                            <artifactId>java-driver-mapper-processor</artifactId>
+                            <version>${datastax-driver.version}</version>
+                        </path>
+                    </annotationProcessorPaths>
                 </configuration>
             </plugin>
             <plugin>

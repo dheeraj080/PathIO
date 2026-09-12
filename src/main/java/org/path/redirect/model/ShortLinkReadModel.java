@@ -1,4 +1,4 @@
-package org.path.redirect;
+package org.path.redirect.model;
 
 import java.io.Serializable;
 
