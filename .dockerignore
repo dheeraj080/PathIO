@@ -1,9 +1,0 @@
-target/
-!.jar
-.git/
-.gitignore
-.dockerignore
-node_modules/
-frontend/
-.env
-*.log

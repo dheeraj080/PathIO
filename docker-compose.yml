@@ -1,0 +1,77 @@
+services:
+  # Primary Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: shortener_postgres
+    environment:
+      POSTGRES_DB: urlshortener
+      POSTGRES_USER: shortener
+      POSTGRES_PASSWORD: shortener_pass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U shortener -d urlshortener" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis L2 Cache + Stream Analytics Queue
+  redis:
+    image: redis:7-alpine
+    container_name: shortener_redis
+    ports:
+      - "6379:6379"
+    command: [ "redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru" ]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ClickHouse Columnar Analytics DB
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.3-alpine
+    container_name: shortener_clickhouse
+    ports:
+      - "8123:8123" # HTTP Interface
+      - "9000:9000" # Native Client Port
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spy", "http://localhost:8123/ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Monolith Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: shortener_app
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/urlshortener
+      - SPRING_DATA_REDIS_HOST=redis
+      - CLICKHOUSE_DATASOURCE_URL=jdbc:clickhouse://clickhouse:8123/default
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  redis_data:
+  clickhouse_data:
