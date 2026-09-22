@@ -10,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
+import java.util.Set;
+
 import java.io.IOException;
 
 @Component
@@ -24,6 +26,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private static final int READ_LIMIT_PER_SEC = 1000;          // 1000 req / sec
     private static final long READ_WINDOW_MS = 1_000L;
+
+    private static final Set<String> TRUSTED_PROXIES = Set.of("10.0.0.1", "172.16.0.1");
 
     public RateLimitingFilter(RateLimiterService rateLimiterService) {
         this.rateLimiterService = rateLimiterService;
@@ -67,11 +71,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     private String extractClientIp(HttpServletRequest request) {
-        String xfHeader = request.getHeader("X-Forwarded-For");
-        if (xfHeader != null && !xfHeader.isEmpty()) {
-            // Return first IP if behind Reverse Proxies / Cloudflare
-            return xfHeader.split(",")[0].trim();
+        String remoteAddr = request.getRemoteAddr();
+        if (TRUSTED_PROXIES.contains(remoteAddr)) {
+            String xfHeader = request.getHeader("X-Forwarded-For");
+            if (xfHeader != null && !xfHeader.isEmpty()) {
+                return xfHeader.split(",")[0].trim();
+            }
         }
-        return request.getRemoteAddr();
+        return remoteAddr;
     }
 }
