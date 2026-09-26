@@ -5,7 +5,7 @@ target/
 !**/src/test/**/target/
 .env
 .env.local
-docker-compose.yml
+
 
 ### STS ###
 .apt_generated

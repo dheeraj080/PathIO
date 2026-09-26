@@ -1,10 +1,10 @@
-package com.path.pathio;
+package com.pt.pathio;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class PathIoApplicationTests {
+class PathioApplicationTests {
 
     @Test
     void contextLoads() {
