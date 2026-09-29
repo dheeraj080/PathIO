@@ -3,26 +3,40 @@ package com.pt.pathio.service;
 import com.pt.pathio.dto.ShortenUrlRequest;
 import com.pt.pathio.dto.ShortenUrlResponse;
 import com.pt.pathio.entity.UrlEntity;
+import com.pt.pathio.event.UrlClickedEvent;
 import com.pt.pathio.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+
+import java.net.InetAddress;
+import java.net.URI;
+import java.time.Duration;
+import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class UrlShortenerService {
 
     private final UrlRepository urlRepository;
-    private final DistributedIdGenerator distributedIdGenerator;
+    private final IdGenerator idGenerator;
     private final FeistelObfuscator feistelObfuscator;
+    private final ApplicationEventPublisher eventPublisher;
+    private final StringRedisTemplate redisTemplate;
 
     private static final int SHORT_CODE_LENGTH = 7;
     private static final String BASE62 = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final String DOMAIN = "https://path.io/";
+    private static final String SERVICE_HOST = "path.io";
+    private static final String CACHE_PREFIX = "url:";
 
     public ShortenUrlResponse shortenUrl(ShortenUrlRequest request) {
 
-        long rawId = distributedIdGenerator.nextId();
+        String longUrl = request.getLongUrl();
+        validateUrlSafety(longUrl);
+
+        long rawId = idGenerator.nextId();
         long obfuscatedId = feistelObfuscator.obfuscate(rawId);
         String shortCode = encodeBase62(obfuscatedId);
 
@@ -38,20 +52,77 @@ public class UrlShortenerService {
         return new ShortenUrlResponse(shortUrl, request.getLongUrl());
     }
 
-    @Cacheable(value = "urls", key = "#shortCode")
-    public String getOriginalUrl(String shortCode) {
-        UrlEntity urlEntity = urlRepository.findByShortCode(shortCode)
-                .orElseThrow(() -> new RuntimeException("URL not found for short code: " + shortCode));
+    private void validateUrlSafety(String url) {
+        try {
+            URI uri = new URI(url);
+            String host = uri.getHost();
 
-        urlEntity.setClickCount(urlEntity.getClickCount() + 1);
-        urlRepository.save(urlEntity);
+            if (host == null) {
+                throw new IllegalArgumentException("Invalid URL host");
+            }
 
-        return urlEntity.getLongUrl();
+            if (host.equalsIgnoreCase(SERVICE_HOST) || url.startsWith(DOMAIN)) {
+                throw new IllegalArgumentException("Cannot shorten URLs pointing to this service domain");
+            }
+
+            if (isForbiddenHost(host)) {
+                throw new IllegalArgumentException("URL host is not allowed");
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid or malformed URL");
+        }
     }
 
-    private String generateUniqueShortCode() {
-        long id = distributedIdGenerator.nextId();
-        return encodeBase62(id);
+    public boolean isForbiddenHost(String host) {
+        String lowerHost = host.toLowerCase();
+
+        if (lowerHost.equals("localhost") || lowerHost.endsWith(".local") || lowerHost.endsWith(".internal")) {
+            return true;
+        }
+
+        try {
+            InetAddress inetAddress = InetAddress.getByName(host);
+            return inetAddress.isLoopbackAddress() ||
+                    inetAddress.isAnyLocalAddress() ||
+                    inetAddress.isSiteLocalAddress() ||
+                    inetAddress.isLinkLocalAddress();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+
+    public String getOriginalUrl(String shortCode) {
+        if (shortCode == null || shortCode.length() != 7 || !shortCode.matches("^[a-zA-Z0-9]+$")) {
+            throw new IllegalArgumentException("Invalid short code format");
+        }
+
+        String cacheKey = CACHE_PREFIX + shortCode;
+        String longUrl = redisTemplate.opsForValue().get(cacheKey);
+
+        if (longUrl != null) {
+            if (longUrl.isEmpty()) {
+                throw new RuntimeException("Url not Found for short code: " + shortCode);
+            }
+            eventPublisher.publishEvent(new UrlClickedEvent(shortCode));
+            return longUrl;
+        }
+
+        // 1. Use .orElse(null) instead of .orElseThrow() directly
+        UrlEntity urlEntity = urlRepository.findByShortCode(shortCode).orElse(null);
+
+        // 2. Now this check works as intended!
+        if (urlEntity == null) {
+            redisTemplate.opsForValue().set(cacheKey, "", Duration.ofMinutes(5));
+            throw new RuntimeException("URL not found for short code: " + shortCode);
+        }
+
+        redisTemplate.opsForValue().set(cacheKey, urlEntity.getLongUrl(), Duration.ofDays(7));
+        eventPublisher.publishEvent(new UrlClickedEvent(shortCode));
+
+        return urlEntity.getLongUrl();
     }
 
     private String encodeBase62(long value) {

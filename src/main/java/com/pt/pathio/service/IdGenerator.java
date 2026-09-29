@@ -11,9 +11,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Component
-public class DistributedIdGenerator {
+public class IdGenerator {
 
-    private static final Logger log = LoggerFactory.getLogger(DistributedIdGenerator.class);
+    private static final Logger log = LoggerFactory.getLogger(IdGenerator.class);
 
     private static final String SEQUENCE_NAME = "url_sequence";
     private static final long RANGE_SIZE = 10_000L;
@@ -29,13 +29,13 @@ public class DistributedIdGenerator {
     private volatile Range currentRange;
     private volatile Range nextRange;
 
-    public DistributedIdGenerator(JdbcTemplate jdbcTemplate) {
+    public IdGenerator(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @PostConstruct
     public void init() {
-        log.info("Initializing 41-bit constrained DistributedIdGenerator segments...");
+        log.info("Initializing 41-bit constrained IdGenerator segments...");
         this.currentRange = fetchNewRangeFromDb();
         this.nextRange = fetchNewRangeFromDb();
     }
