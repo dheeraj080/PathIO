@@ -21,17 +21,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         if (clientIp == null || clientIp.isEmpty()) {
             clientIp = request.getRemoteAddr();
         } else {
-            // X-Forwarded-For can contain a comma-separated list; take the first IP
             clientIp = clientIp.split(",")[0].trim();
         }
 
-        // Check rate limit
         if (!rateLimiterService.isAllowed(clientIp)) {
             response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
             response.getWriter().write("Rate limit exceeded. Please try again later.");
-            return false; // Stop request from reaching the controller
+            return false;
         }
 
-        return true; // Allow request to proceed
+        return true;
     }
 }

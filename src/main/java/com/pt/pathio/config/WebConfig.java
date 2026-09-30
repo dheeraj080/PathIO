@@ -15,6 +15,6 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(rateLimitInterceptor)
-                .addPathPatterns("/api/v1/shorten"); // Adjust to match your actual controller mapping
+                .addPathPatterns("/api/v1/shorten");
     }
 }
