@@ -16,20 +16,26 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // Extract client IP (handling standard proxy headers like X-Forwarded-For if behind a load balancer)
-        String clientIp = request.getHeader("X-Forwarded-For");
-        if (clientIp == null || clientIp.isEmpty()) {
-            clientIp = request.getRemoteAddr();
-        } else {
-            clientIp = clientIp.split(",")[0].trim();
+        // Extract client IP securely (supporting standard proxy/load balancer headers)
+        String clientIp = extractClientIp(request);
+        String key = "ip:" + clientIp;
+
+        if (rateLimiterService.isAllowed(key)) {
+            return true; // Allowed
         }
 
-        if (!rateLimiterService.isAllowed(clientIp)) {
-            response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-            response.getWriter().write("Rate limit exceeded. Please try again later.");
-            return false;
-        }
+        // Rate limit exceeded response
+        response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
+        response.setContentType("application/json");
+        response.getWriter().write("{\"error\": \"Too many requests\", \"message\": \"Rate limit exceeded. Please try again later.\"}");
+        return false;
+    }
 
-        return true;
+    private String extractClientIp(HttpServletRequest request) {
+        String xForwardedFor = request.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
     }
 }

@@ -3,6 +3,7 @@ package com.pt.pathio.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
@@ -19,11 +20,10 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EntityListeners(AuditingEntityListener.class) //listen for entity lifecycle events
-public class UrlEntity {
+@EntityListeners(AuditingEntityListener.class)
+public class UrlEntity implements Persistable<Long> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 2048)
@@ -37,7 +37,21 @@ public class UrlEntity {
     private long clickCount = 0;
 
     @CreatedDate
-    @Column(nullable = false , updatable = false)
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @Override
+    public boolean isNew() {
+        return isNew || createdAt == null;
+    }
+
+    @PostPersist
+    @PostLoad
+    void markNotNew() {
+        this.isNew = false;
+    }
 }

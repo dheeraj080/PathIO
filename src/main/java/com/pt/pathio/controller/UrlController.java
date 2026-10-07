@@ -4,6 +4,7 @@ import com.pt.pathio.dto.ShortenUrlRequest;
 import com.pt.pathio.dto.ShortenUrlResponse;
 import com.pt.pathio.service.UrlShortenerService;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,9 +18,8 @@ public class UrlController {
 
     private final UrlShortenerService urlShortenerService;
 
-
     @PostMapping("/v1/shorten")
-    public ResponseEntity<ShortenUrlResponse> shortenUrl(@RequestBody ShortenUrlRequest request) {
+    public ResponseEntity<ShortenUrlResponse> shortenUrl(@Valid @RequestBody ShortenUrlRequest request) {
         ShortenUrlResponse response = urlShortenerService.shortenUrl(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }

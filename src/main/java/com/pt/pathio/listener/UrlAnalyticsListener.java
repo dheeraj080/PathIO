@@ -6,12 +6,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Set;
+import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -21,59 +23,59 @@ public class UrlAnalyticsListener {
     private final StringRedisTemplate redisTemplate;
     private final UrlRepository urlRepository;
 
-    private static final String CLICK_COUNT_KEY_PREFIX = "url:clicks:";
-    private static final String DIRTY_CODES_KEY = "url:dirty_codes";
+    private static final String PENDING_HASH = "url:pending_clicks";
+    private static final String PROCESSING_HASH = "url:pending_clicks:processing";
+
+    private static final String DRAIN_LUA = """
+            if redis.call('EXISTS', KEYS[1]) == 1 then
+                redis.call('RENAME', KEYS[1], KEYS[2])
+                return 1
+            else
+                return 0
+            end
+            """;
+
+    private final DefaultRedisScript<Long> drainScript =
+            new DefaultRedisScript<>(DRAIN_LUA, Long.class);
 
     @Async
     @EventListener
     public void handleUrlClicked(UrlClickedEvent event) {
         try {
-            String shortCode = event.getShortCode();
-            String countKey = CLICK_COUNT_KEY_PREFIX + shortCode;
-
-            // 1. Increment click count atomically in Redis (In-memory, blazing fast)
-            redisTemplate.opsForValue().increment(countKey);
-
-            // 2. Track that this shortCode has pending DB updates
-            redisTemplate.opsForSet().add(DIRTY_CODES_KEY, shortCode);
-
+            // Modern Record accessor syntax: event.shortCode()
+            redisTemplate.opsForHash().increment(PENDING_HASH, event.shortCode(), 1);
         } catch (Exception e) {
-            log.error("Failed to buffer click event for short code: {}", event.getShortCode(), e);
+            log.error("Failed to buffer click event for short code: {}", event.shortCode(), e);
         }
     }
 
-    @Scheduled(fixedRate = 30000) // Runs every 30 seconds
+    @Scheduled(fixedRate = 30000)
     @Transactional
     public void flushClickCountsToDb() {
         try {
-            // Retrieve all short codes that have pending clicks
-            Set<String> dirtyCodes = redisTemplate.opsForSet().members(DIRTY_CODES_KEY);
-            if (dirtyCodes == null || dirtyCodes.isEmpty()) {
+            Long swapped = redisTemplate.execute(
+                    drainScript,
+                    List.of(PENDING_HASH, PROCESSING_HASH)
+            );
+
+            if (swapped == null || swapped == 0) {
                 return;
             }
 
-            // Remove the tracking set so we process a clean batch
-            redisTemplate.delete(DIRTY_CODES_KEY);
-
-            for (String shortCode : dirtyCodes) {
-                String countKey = CLICK_COUNT_KEY_PREFIX + shortCode;
-                String countStr = redisTemplate.opsForValue().get(countKey);
-
-                if (countStr != null) {
-                    long clicksToAdd = Long.parseLong(countStr);
-
-                    // Clear the counter key from Redis
-                    redisTemplate.delete(countKey);
-
-                    // Update database with the accumulated batch count
-                    urlRepository.findByShortCode(shortCode).ifPresent(urlEntity -> {
-                        urlEntity.setClickCount(urlEntity.getClickCount() + clicksToAdd);
-                        urlRepository.save(urlEntity);
-                    });
-                }
+            Map<Object, Object> entries = redisTemplate.opsForHash().entries(PROCESSING_HASH);
+            if (entries.isEmpty()) {
+                redisTemplate.delete(PROCESSING_HASH);
+                return;
             }
 
-            log.info("Successfully flushed click analytics for {} URLs to the database.", dirtyCodes.size());
+            for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+                String shortCode = (String) entry.getKey();
+                long clicks = Long.parseLong((String) entry.getValue());
+                urlRepository.incrementClickCount(shortCode, clicks);
+            }
+
+            redisTemplate.delete(PROCESSING_HASH);
+            log.info("Successfully flushed click analytics for {} URLs to DB.", entries.size());
 
         } catch (Exception e) {
             log.error("Error during scheduled click analytics flush to DB", e);

@@ -13,6 +13,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Component
 public class IdGenerator {
@@ -25,15 +26,13 @@ public class IdGenerator {
     private static final long MAX_40_BIT_ID = (1L << 40) - 1;
 
     private final JdbcTemplate jdbcTemplate;
-    private final Object swapLock = new Object();
+    private final ReentrantLock swapLock = new ReentrantLock();
     private final AtomicBoolean isPrefetching = new AtomicBoolean(false);
 
-    // Dedicated single-thread executor to prevent ForkJoinPool thread starvation under high load
-    private final ExecutorService prefetchExecutor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "id-generator-prefetch");
-        t.setDaemon(true);
-        return t;
-    });
+    // Executed on Java Virtual Threads to eliminate OS thread overhead
+    private final ExecutorService prefetchExecutor = Executors.newSingleThreadExecutor(
+            Thread.ofVirtual().name("id-generator-prefetch").factory()
+    );
 
     private volatile Range currentRange;
     private volatile Range nextRange;
@@ -66,18 +65,19 @@ public class IdGenerator {
     public long nextId() {
         while (true) {
             Range activeRange = this.currentRange;
-            long id = activeRange.currentId.getAndIncrement();
+            long id = activeRange.currentId().getAndIncrement();
 
-            if (id <= activeRange.end) {
-                long remaining = activeRange.end - id;
-
+            if (id <= activeRange.end()) {
+                long remaining = activeRange.end() - id;
                 if (remaining <= (long) (RANGE_SIZE * LOW_WATERMARK_PERCENTAGE)) {
                     triggerAsyncPrefetch();
                 }
                 return id;
             }
 
-            synchronized (swapLock) {
+            // Explicit ReentrantLock prevents carrier thread pinning on Virtual Threads
+            swapLock.lock();
+            try {
                 if (this.currentRange == activeRange) {
                     if (this.nextRange == null) {
                         log.warn("Next buffer segment not ready. Synchronous DB fetch triggered.");
@@ -86,26 +86,32 @@ public class IdGenerator {
 
                     this.currentRange = this.nextRange;
                     this.nextRange = null;
-                    this.isPrefetching.set(false);
                     triggerAsyncPrefetch();
                 }
+            } finally {
+                swapLock.unlock();
             }
         }
     }
 
     private void triggerAsyncPrefetch() {
-        // Atomic flag ensures ONLY ONE thread triggers the background task
         if (this.nextRange == null && isPrefetching.compareAndSet(false, true)) {
             CompletableFuture.runAsync(() -> {
                 try {
                     Range freshRange = fetchNewRangeFromDb();
-                    synchronized (swapLock) {
-                        this.nextRange = freshRange;
+                    swapLock.lock();
+                    try {
+                        if (this.nextRange == null) {
+                            this.nextRange = freshRange;
+                            log.info("Pre-fetched segment: [{}-{}]", freshRange.start(), freshRange.end());
+                        }
+                    } finally {
+                        swapLock.unlock();
                     }
-                    log.info("Successfully pre-fetched 40-bit segment: [{}-{}]", freshRange.start, freshRange.end);
                 } catch (Exception ex) {
-                    log.error("Failed to pre-fetch next 40-bit ID range", ex);
-                    this.isPrefetching.set(false); // Allow retry on failure
+                    log.error("Failed to pre-fetch next ID range", ex);
+                } finally {
+                    this.isPrefetching.set(false);
                 }
             }, prefetchExecutor);
         }
@@ -125,25 +131,17 @@ public class IdGenerator {
                     (rs, rowNum) -> {
                         long start = rs.getLong("range_start");
                         long end = rs.getLong("range_end");
-                        return new Range(start, end);
+                        return new Range(start, end, new AtomicLong(start));
                     },
                     RANGE_SIZE, SEQUENCE_NAME, RANGE_SIZE, MAX_40_BIT_ID, RANGE_SIZE
             );
         } catch (org.springframework.dao.EmptyResultDataAccessException e) {
             log.error("CRITICAL: 40-bit ID space exhausted for sequence: {}", SEQUENCE_NAME);
-            throw new IllegalStateException("Maximum 40-bit ID limit (" + MAX_40_BIT_ID + ") has been reached!", e);
+            throw new IllegalStateException("Maximum 40-bit ID limit reached!", e);
         }
     }
 
-    private static class Range {
-        private final long start;
-        private final long end;
-        private final AtomicLong currentId;
-
-        public Range(long start, long end) {
-            this.start = start;
-            this.end = end;
-            this.currentId = new AtomicLong(start);
-        }
+    // Modern Java Record for internal range state
+    public record Range(long start, long end, AtomicLong currentId) {
     }
 }
