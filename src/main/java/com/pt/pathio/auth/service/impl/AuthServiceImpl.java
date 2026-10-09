@@ -7,29 +7,43 @@ import com.pt.pathio.auth.service.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Locale;
+import java.util.regex.Pattern;
+
 @Service
 @AllArgsConstructor
 public class AuthServiceImpl implements AuthService {
 
     private final UserService userService;
-    private final UserRepository userRepository; // Added to check for existing email
+    private final UserRepository userRepository;
+
+    private static final Pattern EMAIL_PATTERN = Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
     @Override
     public UserDTO registerUser(UserDTO userDTO) {
-        // 1. Validation Logic moved from UserServiceImpl
         if (userDTO.getEmail() == null || userDTO.getEmail().isBlank()) {
-            throw new IllegalArgumentException("Email is Required");
-        }
-        if (userDTO.getPassword() == null || userDTO.getPassword().isBlank()) {
-            throw new IllegalArgumentException("Password is Required");
-        }
-        if (userRepository.existsByEmail(userDTO.getEmail())) {
-            throw new IllegalArgumentException("Email Already Exists");
+            throw new IllegalArgumentException("Email is required");
         }
 
-        // 2. Delegate creation to the user service
+        String rawEmail = userDTO.getEmail().trim();
+        if (!EMAIL_PATTERN.matcher(rawEmail).matches()) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+
+        if (userDTO.getPassword() == null || userDTO.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+
+        if (userDTO.getPassword().length() < 8) {
+            throw new IllegalArgumentException("Password must be at least 8 characters");
+        }
+
+        String normalizedEmail = rawEmail.toLowerCase(Locale.ROOT);
+        if (userRepository.existsByEmailIgnoreCase(normalizedEmail)) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        userDTO.setEmail(normalizedEmail);
         return userService.createUser(userDTO);
     }
-
-
 }

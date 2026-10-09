@@ -5,8 +5,10 @@ import com.pt.pathio.dto.ShortenUrlResponse;
 import com.pt.pathio.entity.UrlEntity;
 import com.pt.pathio.event.UrlClickedEvent;
 import com.pt.pathio.exception.ResourceNotFoundException;
+import com.pt.pathio.metrics.PathioMetrics;
 import com.pt.pathio.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -19,6 +21,7 @@ import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UrlShortenerService {
 
     private final UrlRepository urlRepository;
@@ -26,6 +29,8 @@ public class UrlShortenerService {
     private final FeistelObfuscator feistelObfuscator;
     private final ApplicationEventPublisher eventPublisher;
     private final StringRedisTemplate redisTemplate;
+    private final PathioMetrics pathioMetrics;
+    private final com.pt.pathio.auth.repository.UserRepository userRepository;
 
     @Value("${app.shortener.domain:https://path.io/}")
     private String domain;
@@ -38,24 +43,51 @@ public class UrlShortenerService {
     private static final String CACHE_PREFIX = "url:";
 
     public ShortenUrlResponse shortenUrl(ShortenUrlRequest request) {
-        String longUrl = request.longUrl();
-        validateUrlSafety(longUrl);
+        try {
+            String longUrl = request.longUrl();
+            validateUrlSafety(longUrl);
 
-        long rawId = idGenerator.nextId();
-        long obfuscatedId = feistelObfuscator.obfuscate(rawId);
-        String shortCode = encodeBase62(obfuscatedId);
+            long rawId = idGenerator.nextId();
+            long obfuscatedId = feistelObfuscator.obfuscate(rawId);
+            String shortCode = encodeBase62(obfuscatedId);
 
-        UrlEntity urlEntity = UrlEntity.builder()
-                .id(rawId)
-                .longUrl(request.longUrl())
-                .shortCode(shortCode)
-                .clickCount(0L)
-                .build();
+            com.pt.pathio.auth.entity.User user = null;
+            org.springframework.security.core.Authentication auth =
+                    org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            if (auth != null && auth.isAuthenticated() && auth.getPrincipal() instanceof com.pt.pathio.auth.UserPrincipal principal) {
+                user = userRepository.findById(principal.id()).orElse(null);
+            }
 
-        urlRepository.save(urlEntity);
+            UrlEntity urlEntity = UrlEntity.builder()
+                    .id(rawId)
+                    .longUrl(request.longUrl())
+                    .shortCode(shortCode)
+                    .clickCount(0L)
+                    .user(user)
+                    .build();
 
+            urlRepository.save(urlEntity);
+            pathioMetrics.incrementUrlShortened();
+
+            String baseUrl = domain.endsWith("/") ? domain : domain + "/";
+            log.info("Successfully shortened URL: rawId={} shortCode={} userId={}", rawId, shortCode, user != null ? user.getId() : "anonymous");
+            return new ShortenUrlResponse(baseUrl + shortCode, request.longUrl());
+        } catch (Exception e) {
+            pathioMetrics.incrementUrlShortenFailed();
+            throw e;
+        }
+    }
+
+    public org.springframework.data.domain.Page<com.pt.pathio.dto.UserUrlResponse> getUserUrls(java.util.UUID userId, org.springframework.data.domain.Pageable pageable) {
+        org.springframework.data.domain.Page<UrlEntity> page = urlRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
         String baseUrl = domain.endsWith("/") ? domain : domain + "/";
-        return new ShortenUrlResponse(baseUrl + shortCode, request.longUrl());
+        return page.map(entity -> new com.pt.pathio.dto.UserUrlResponse(
+                entity.getShortCode(),
+                baseUrl + entity.getShortCode(),
+                entity.getLongUrl(),
+                entity.getClickCount(),
+                entity.getCreatedAt()
+        ));
     }
 
     private void validateUrlSafety(String url) {
@@ -106,32 +138,40 @@ public class UrlShortenerService {
     }
 
     public String getOriginalUrl(String shortCode) {
-        if (shortCode == null || shortCode.length() != SHORT_CODE_LENGTH || !shortCode.matches("^[a-zA-Z0-9]+$")) {
-            throw new IllegalArgumentException("Invalid short code format");
-        }
+        long startTime = System.currentTimeMillis();
+        try {
+            if (shortCode == null || shortCode.length() != SHORT_CODE_LENGTH || !shortCode.matches("^[a-zA-Z0-9]+$")) {
+                throw new IllegalArgumentException("Invalid short code format");
+            }
 
-        String cacheKey = CACHE_PREFIX + shortCode;
-        String longUrl = redisTemplate.opsForValue().get(cacheKey);
+            String cacheKey = CACHE_PREFIX + shortCode;
+            String longUrl = redisTemplate.opsForValue().get(cacheKey);
 
-        if (longUrl != null) {
-            if (longUrl.isEmpty()) {
+            if (longUrl != null) {
+                if (longUrl.isEmpty()) {
+                    throw new ResourceNotFoundException("URL not found for code: " + shortCode);
+                }
+                pathioMetrics.incrementCacheHit();
+                eventPublisher.publishEvent(new UrlClickedEvent(shortCode));
+                return longUrl;
+            }
+
+            // Cache miss -> Fetch from PostgreSQL
+            pathioMetrics.incrementCacheMiss();
+            UrlEntity urlEntity = urlRepository.findByShortCode(shortCode).orElse(null);
+
+            if (urlEntity == null) {
+                redisTemplate.opsForValue().set(cacheKey, "", Duration.ofMinutes(5));
                 throw new ResourceNotFoundException("URL not found for code: " + shortCode);
             }
+
+            redisTemplate.opsForValue().set(cacheKey, urlEntity.getLongUrl(), Duration.ofDays(7));
             eventPublisher.publishEvent(new UrlClickedEvent(shortCode));
-            return longUrl;
+
+            return urlEntity.getLongUrl();
+        } finally {
+            pathioMetrics.recordRedirectLatency(System.currentTimeMillis() - startTime);
         }
-
-        UrlEntity urlEntity = urlRepository.findByShortCode(shortCode).orElse(null);
-
-        if (urlEntity == null) {
-            redisTemplate.opsForValue().set(cacheKey, "", Duration.ofMinutes(5));
-            throw new ResourceNotFoundException("URL not found for code: " + shortCode);
-        }
-
-        redisTemplate.opsForValue().set(cacheKey, urlEntity.getLongUrl(), Duration.ofDays(7));
-        eventPublisher.publishEvent(new UrlClickedEvent(shortCode));
-
-        return urlEntity.getLongUrl();
     }
 
     private String encodeBase62(long value) {

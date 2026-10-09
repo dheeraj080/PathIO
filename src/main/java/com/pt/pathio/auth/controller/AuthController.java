@@ -87,11 +87,13 @@ public class AuthController {
         cookieService.addNoStoreHeader(response);
 
         // 3. Build Response
+        UserDTO userDto = modelMapper.map(user, UserDTO.class);
+        userDto.setPassword(null);
         TokenResponse tokenResponse = TokenResponse.of(
                 accessToken,
                 refreshToken,
                 jwtService.getAccessTtlSeconds(),
-                modelMapper.map(user, UserDTO.class)
+                userDto
         );
 
         return ResponseEntity.ok(tokenResponse);
@@ -108,7 +110,7 @@ public class AuthController {
 
         String jti = jwtService.getJti(refreshToken);
         UUID userId = jwtService.getUserId(refreshToken);
-        RefreshToken storedRefreshToken = refreshTokenRepository.findByJti(jti).orElseThrow(() -> new BadCredentialsException("Refresh token not recognized"));
+        RefreshToken storedRefreshToken = refreshTokenRepository.findByJtiWithUser(jti).orElseThrow(() -> new BadCredentialsException("Refresh token not recognized"));
 
         if (storedRefreshToken.isRevoked()) {
             throw new BadCredentialsException("Refresh token expired or revoked");
@@ -144,7 +146,10 @@ public class AuthController {
 
         cookieService.attachRefreshCookie(response, newRefreshToken, (int) jwtService.getRefreshTtlSeconds());
         cookieService.addNoStoreHeader(response);
-        return ResponseEntity.ok(TokenResponse.of(newAccessToken, newRefreshToken, jwtService.getAccessTtlSeconds(), modelMapper.map(user, UserDTO.class)));
+
+        UserDTO refreshUserDto = modelMapper.map(user, UserDTO.class);
+        refreshUserDto.setPassword(null);
+        return ResponseEntity.ok(TokenResponse.of(newAccessToken, newRefreshToken, jwtService.getAccessTtlSeconds(), refreshUserDto));
     }
 
     @PostMapping("/logout")

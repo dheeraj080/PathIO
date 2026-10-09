@@ -52,14 +52,18 @@ public class UserServiceImpl implements UserService {
         User savedUser = userRepository.save(user);
         log.info("User registered and activated: {}", savedUser.getEmail());
 
-        return modelMapper.map(savedUser, UserDTO.class);
+        UserDTO result = modelMapper.map(savedUser, UserDTO.class);
+        result.setPassword(null);
+        return result;
     }
 
     @Override
     public UserDTO getUserByEmail(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
-        return modelMapper.map(user, UserDTO.class);
+        UserDTO result = modelMapper.map(user, UserDTO.class);
+        result.setPassword(null);
+        return result;
     }
 
     @Override
@@ -69,23 +73,14 @@ public class UserServiceImpl implements UserService {
         User existingUser = userRepository.findById(uId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
 
+        // Only allow updating safe profile fields; ignore provider, enabled, roles, password, id, email
         if (userDTO.getName() != null) existingUser.setName(userDTO.getName());
         if (userDTO.getImage() != null) existingUser.setImage(userDTO.getImage());
-        if (userDTO.getProvider() != null) existingUser.setProvider(userDTO.getProvider());
-
-        if (userDTO.getPassword() != null && !userDTO.getPassword().isBlank()) {
-            existingUser.setPassword(passwordEncoder.encode(userDTO.getPassword()));
-
-        }
-
-
-        // FIX: Changed 'user' to 'existingUser'
-        if (userDTO.getEnabled() != null) {
-            existingUser.setEnabled(userDTO.getEnabled());
-        }
 
         User updatedUser = userRepository.save(existingUser);
-        return modelMapper.map(updatedUser, UserDTO.class);
+        UserDTO result = modelMapper.map(updatedUser, UserDTO.class);
+        result.setPassword(null);
+        return result;
     }
 
     @Override
@@ -102,14 +97,20 @@ public class UserServiceImpl implements UserService {
         UUID uId = UserHelper.parseUUID(userId);
         User user = userRepository.findById(uId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
-        return modelMapper.map(user, UserDTO.class);
+        UserDTO result = modelMapper.map(user, UserDTO.class);
+        result.setPassword(null);
+        return result;
     }
 
     @Override
     public Iterable<UserDTO> getAllUsers() {
         return userRepository.findAll()
                 .stream()
-                .map(user -> modelMapper.map(user, UserDTO.class))
+                .map(user -> {
+                    UserDTO dto = modelMapper.map(user, UserDTO.class);
+                    dto.setPassword(null);
+                    return dto;
+                })
                 .collect(Collectors.toList());
     }
 }

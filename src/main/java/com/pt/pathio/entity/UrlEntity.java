@@ -36,6 +36,10 @@ public class UrlEntity implements Persistable<Long> {
     @Builder.Default
     private long clickCount = 0;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private com.pt.pathio.auth.entity.User user;
+
     @CreatedDate
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;

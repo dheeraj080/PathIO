@@ -1,7 +1,6 @@
 package com.pt.pathio.auth.exceptions;
 
 import com.pt.pathio.auth.dto.ApiError;
-import com.pt.pathio.auth.dto.ErrorResponse;
 import com.pt.pathio.exception.ResourceNotFoundException;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,16 +8,19 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -26,26 +28,43 @@ public class GlobalExceptionHandler {
     private final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getFieldErrors().forEach(e -> errors.put(e.getField(), e.getDefaultMessage()));
-        return ResponseEntity.badRequest().body(errors);
+    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest request) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(FieldError::getDefaultMessage)
+                .collect(Collectors.joining("; "));
+        return ResponseEntity.badRequest().body(
+                ApiError.of(400, "Bad Request", message, request.getRequestURI()));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException exception) {
-        ErrorResponse error = new ErrorResponse(exception.getMessage(), HttpStatus.NOT_FOUND, 404);
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    public ResponseEntity<ApiError> handleResourceNotFoundException(ResourceNotFoundException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(404, "Not Found", ex.getMessage(), request.getRequestURI()));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException exception) {
-        ErrorResponse error = new ErrorResponse(exception.getMessage(), HttpStatus.BAD_REQUEST, 400);
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    public ResponseEntity<ApiError> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                ApiError.of(400, "Bad Request", ex.getMessage(), request.getRequestURI()));
     }
 
-    // Consolidated Auth Handler: Removed the redundant 'handleBadCredentials' method
-    // and grouped all security-related exceptions here.
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException e, HttpServletRequest request) {
+        // Anonymous callers get 401; authenticated-but-unauthorised callers get 403
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || auth instanceof AnonymousAuthenticationToken || !auth.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(
+                    ApiError.of(401, "Unauthorized",
+                            "Full authentication is required to access this resource",
+                            request.getRequestURI()));
+        }
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                ApiError.of(HttpStatus.FORBIDDEN.value(),
+                        "Forbidden",
+                        e.getMessage() != null && !e.getMessage().isBlank() ? e.getMessage() : "Access is denied",
+                        request.getRequestURI()));
+    }
+
     @ExceptionHandler({
             UsernameNotFoundException.class,
             BadCredentialsException.class,
@@ -54,12 +73,11 @@ public class GlobalExceptionHandler {
     })
     public ResponseEntity<ApiError> handleAuthException(Exception e, HttpServletRequest request) {
         log.error(e.getMessage(), e.getCause());
-        // We use 401 UNAUTHORIZED for credentials issues rather than 400 BAD REQUEST
         HttpStatus status = HttpStatus.UNAUTHORIZED;
 
         var apiError = ApiError.of(
                 status.value(),
-                "Authentication Failed",
+                "Unauthorized",
                 e.getMessage(),
                 request.getRequestURI()
         );
@@ -71,7 +89,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleExpiredJwt(ExpiredJwtException e, HttpServletRequest request) {
         var apiError = ApiError.of(
                 HttpStatus.UNAUTHORIZED.value(),
-                "Token Expired",
+                "Unauthorized",
                 "Your session has expired. Please login again.",
                 request.getRequestURI()
         );
@@ -79,16 +97,9 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGlobalException(Exception exception) {
-        // 1. Log the full stack trace to your terminal/Docker logs
-        log.error("Global Exception caught: ", exception);
-
-        // 2. Temporarily return the ACTUAL message to Postman for debugging
-        ErrorResponse error = new ErrorResponse(
-                exception.getMessage(), // Changed from "An unexpected error occurred"
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                500
-        );
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    public ResponseEntity<ApiError> handleGlobalException(Exception ex, HttpServletRequest request) {
+        log.error("Global Exception caught: ", ex);
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                ApiError.of(500, "Internal Server Error", ex.getMessage(), request.getRequestURI()));
     }
 }

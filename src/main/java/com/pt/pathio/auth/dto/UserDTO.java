@@ -19,6 +19,7 @@ public class UserDTO {
     private UUID id; // Usually null during registration
     private String name;
     private String email;
+    @com.fasterxml.jackson.annotation.JsonProperty(access = com.fasterxml.jackson.annotation.JsonProperty.Access.WRITE_ONLY)
     private String password; // Raw password from the user
     private String image;
 

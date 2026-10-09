@@ -1,6 +1,8 @@
 package com.pt.pathio.auth.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pt.pathio.auth.UserPrincipal;
+import com.pt.pathio.auth.dto.ApiError;
 import com.pt.pathio.auth.repository.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -31,6 +33,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Override
     protected void doFilterInternal(
@@ -57,13 +60,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             userRepository.findById(UUID.fromString(userId)).ifPresent(user -> {
                 if (user.isEnabled() && user.isAccountNonLocked()) {
-
-                    // NEW: Create the public principal instead of passing the entity
                     UserPrincipal principal = new UserPrincipal(user.getId(), user.getEmail());
 
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(
-                                    principal, // Use the Record here
+                                    principal,
                                     null,
                                     user.getAuthorities());
 
@@ -75,16 +76,31 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
 
         } catch (ExpiredJwtException e) {
-            log.error("JWT Token expired: {}", e.getMessage());
-            sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Token expired");
+            log.warn("JWT Token expired: {}", e.getMessage());
+            // If the endpoint is public (such as /api/v1/shorten), ignore invalid/expired tokens and treat as anonymous
+            if (isPublicEndpoint(request)) {
+                SecurityContextHolder.clearContext();
+                filterChain.doFilter(request, response);
+                return;
+            }
+            sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized", "Token expired", request.getRequestURI());
         } catch (JwtException | BadCredentialsException | IllegalArgumentException e) {
-            log.error("JWT Validation failed: {}", e.getMessage());
+            log.warn("JWT Validation failed: {}", e.getMessage());
             SecurityContextHolder.clearContext();
-            sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Invalid token");
+            if (isPublicEndpoint(request)) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+            sendError(response, HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized", "Invalid token", request.getRequestURI());
         } catch (Exception e) {
             log.error("Unexpected error in security filter: ", e);
-            sendError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
+            sendError(response, HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal Server Error", "Internal server error", request.getRequestURI());
         }
+    }
+
+    private boolean isPublicEndpoint(HttpServletRequest request) {
+        String uri = request.getRequestURI();
+        return uri.equals("/api/v1/shorten") || uri.startsWith("/api/v1/shorten/");
     }
 
     @Override
@@ -96,16 +112,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 uri.startsWith("/error") ||
                 uri.startsWith("/v3/api-docs") ||
                 uri.startsWith("/swagger-ui") ||
-                uri.startsWith("/api/public") ||
-                uri.startsWith("/api/analytics");
+                uri.startsWith("/api/public");
     }
 
-    private void sendError(HttpServletResponse response, int status, String message)
+    private void sendError(HttpServletResponse response, int status, String error, String message, String path)
             throws IOException {
         response.setStatus(status);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.getWriter().write("""
-                {"message": "%s", "status": %d}
-                """.formatted(message, status));
+        ApiError apiError = ApiError.of(status, error, message, path);
+        objectMapper.writeValue(response.getWriter(), apiError);
     }
 }

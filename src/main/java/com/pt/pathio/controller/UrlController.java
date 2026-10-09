@@ -1,12 +1,18 @@
 package com.pt.pathio.controller;
 
+import com.pt.pathio.auth.UserPrincipal;
 import com.pt.pathio.dto.ShortenUrlRequest;
 import com.pt.pathio.dto.ShortenUrlResponse;
+import com.pt.pathio.dto.UserUrlResponse;
 import com.pt.pathio.service.UrlShortenerService;
-import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
@@ -22,6 +28,14 @@ public class UrlController {
     public ResponseEntity<ShortenUrlResponse> shortenUrl(@Valid @RequestBody ShortenUrlRequest request) {
         ShortenUrlResponse response = urlShortenerService.shortenUrl(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping("/v1/urls/me")
+    public ResponseEntity<Page<UserUrlResponse>> getMyUrls(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @PageableDefault(size = 20) Pageable pageable
+    ) {
+        return ResponseEntity.ok(urlShortenerService.getUserUrls(principal.id(), pageable));
     }
 
     @GetMapping("/v1/{shortCode}")

@@ -1,18 +1,22 @@
 package com.pt.pathio.interceptor;
 
+import com.pt.pathio.metrics.PathioMetrics;
 import com.pt.pathio.service.RateLimiterService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class RateLimitInterceptor implements HandlerInterceptor {
 
     private final RateLimiterService rateLimiterService;
+    private final PathioMetrics pathioMetrics;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -23,6 +27,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         if (rateLimiterService.isAllowed(key)) {
             return true; // Allowed
         }
+
+        pathioMetrics.incrementRateLimitBlocked();
+        log.warn("Rate limit exceeded for IP: {} on URI: {}", clientIp, request.getRequestURI());
 
         // Rate limit exceeded response
         response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());

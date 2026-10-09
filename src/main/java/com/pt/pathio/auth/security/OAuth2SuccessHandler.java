@@ -1,5 +1,6 @@
 package com.pt.pathio.auth.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pt.pathio.auth.entity.Provider;
 import com.pt.pathio.auth.entity.RefreshToken;
 import com.pt.pathio.auth.entity.User;
@@ -8,10 +9,9 @@ import com.pt.pathio.auth.repository.UserRepository;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.Value;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -21,7 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Optional;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Component
@@ -32,42 +34,44 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
     private final JwtService jwtService;
     private final CookieService cookieService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ObjectMapper objectMapper;
+    private final List<String> authorizedOrigins;
 
-//    @Value("${app.auth.frontend.success-redirect}")
-//    private String frontEndSuccessUrl;
-
-    public OAuth2SuccessHandler(UserRepository userRepository, JwtService jwtService, CookieService cookieService, RefreshTokenRepository refreshTokenRepository) {
+    public OAuth2SuccessHandler(
+            UserRepository userRepository,
+            JwtService jwtService,
+            CookieService cookieService,
+            RefreshTokenRepository refreshTokenRepository,
+            ObjectMapper objectMapper,
+            @Value("${app.oauth2.authorized-origins:${app.cors.allowed-origins:http://localhost:3000,http://localhost:3001}}") String authorizedOriginsStr
+    ) {
         this.userRepository = userRepository;
         this.jwtService = jwtService;
         this.cookieService = cookieService;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.objectMapper = objectMapper;
+        this.authorizedOrigins = Arrays.stream(authorizedOriginsStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
     }
-
 
     @Override
     @Transactional
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
-        logger.info("Successful authentication");
-        logger.info(authentication.toString());
-
-
         OAuth2User oAuth2User = (OAuth2User) authentication.getPrincipal();
-
-        //identify user:
 
         String registrationId = "unknown";
         if (authentication instanceof OAuth2AuthenticationToken token) {
             registrationId = token.getAuthorizedClientRegistrationId();
         }
 
-        logger.info("registrationId:" + registrationId);
-        logger.info("user:" + oAuth2User.getAttributes().toString());
+        logger.info("OAuth2 authentication succeeded for provider: {}", registrationId);
 
         User user;
         switch (registrationId) {
             case "google" -> {
                 String googleId = oAuth2User.getAttributes().getOrDefault("sub", "").toString();
-
                 String email = oAuth2User.getAttributes().getOrDefault("email", "").toString();
                 String name = oAuth2User.getAttributes().getOrDefault("name", "").toString();
                 String picture = oAuth2User.getAttributes().getOrDefault("picture", "").toString();
@@ -80,9 +84,7 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                         .providerId(googleId)
                         .build();
 
-
                 user = userRepository.findByEmail(email).orElseGet(() -> userRepository.save(newUser));
-
             }
 
             case "github" -> {
@@ -105,27 +107,11 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
                         .build();
                 user = userRepository.findByProviderAndProviderId(Provider.GITHUB, githubId)
                         .orElseGet(() -> userRepository.save(newUser));
-
             }
 
-            default -> {
-                throw new RuntimeException("Invalid registration id");
-            }
-
+            default -> throw new RuntimeException("Invalid registration id: " + registrationId);
         }
 
-
-        //username
-        //user email
-        //new usercreate
-
-
-        //jwt token__ token ke sath front -- pe fir redirect.
-
-        //refresh:
-//        user--> refresh token unko revoke
-
-//        refresh token bana ke dunga:
         String jti = UUID.randomUUID().toString();
         RefreshToken refreshTokenOb = RefreshToken.builder()
                 .jti(jti)
@@ -141,19 +127,36 @@ public class OAuth2SuccessHandler implements AuthenticationSuccessHandler {
         String refreshToken = jwtService.generateRefreshToken(user, refreshTokenOb.getJti());
         cookieService.attachRefreshCookie(response, refreshToken, (int) jwtService.getRefreshTtlSeconds());
 
-        // Return HTML to post message to frontend popup opener
         response.setContentType("text/html");
 
-        // Manual JSON construction to avoid adding Jackson ObjectMapper to constructor if not already there
-        String userJson = String.format("{\"id\":\"%s\",\"email\":\"%s\",\"name\":\"%s\",\"image\":\"%s\"}",
-                user.getId(), user.getEmail(), user.getName() != null ? user.getName().replace("\"", "\\\"") : "",
-                user.getImage() != null ? user.getImage().replace("\"", "\\\"") : "");
+        Map<String, Object> userPayload = Map.of(
+                "id", user.getId().toString(),
+                "email", user.getEmail(),
+                "name", user.getName() != null ? user.getName() : "",
+                "image", user.getImage() != null ? user.getImage() : ""
+        );
 
-        String payloadJson = String.format("{\"accessToken\":\"%s\",\"refreshToken\":\"%s\",\"expiresIn\":%d,\"user\":%s}",
-                accessToken, refreshToken, jwtService.getAccessTtlSeconds(), userJson);
+        Map<String, Object> messagePayload = Map.of(
+                "type", "OAUTH_AUTH_SUCCESS",
+                "payload", Map.of(
+                        "accessToken", accessToken,
+                        "refreshToken", refreshToken,
+                        "expiresIn", jwtService.getAccessTtlSeconds(),
+                        "user", userPayload
+                )
+        );
+
+        String payloadJson = objectMapper.writeValueAsString(messagePayload);
+        String originsJson = objectMapper.writeValueAsString(authorizedOrigins);
 
         String html = "<!DOCTYPE html><html><body><script>"
-                + "window.opener.postMessage({ type: 'OAUTH_AUTH_SUCCESS', payload: " + payloadJson + " }, '*');"
+                + "const allowedOrigins = " + originsJson + ";"
+                + "const message = " + payloadJson + ";"
+                + "if (window.opener) {"
+                + "  allowedOrigins.forEach(origin => {"
+                + "    try { window.opener.postMessage(message, origin); } catch (e) {}"
+                + "  });"
+                + "}"
                 + "window.close();"
                 + "</script></body></html>";
 

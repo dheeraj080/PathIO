@@ -14,6 +14,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Stri
 
     Optional<RefreshToken> findByJti(String jti);
 
+    @Query("SELECT rt FROM RefreshToken rt JOIN FETCH rt.user WHERE rt.jti = :jti")
+    Optional<RefreshToken> findByJtiWithUser(@Param("jti") String jti);
+
     @Modifying
     @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < :cutoff")
     void deleteExpiredBefore(@Param("cutoff") Instant cutoff);
