@@ -61,7 +61,6 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/public").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/*").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/shorten").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/favicon.ico", "/css/**", "/js/**", "/images/**").permitAll()
                         .requestMatchers("/api/v1/analytics/**").authenticated()

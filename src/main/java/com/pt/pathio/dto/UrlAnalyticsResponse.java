@@ -7,5 +7,6 @@ public record UrlAnalyticsResponse(
         String shortUrl,
         String longUrl,
         long totalClicks,
+        long uniqueClicks,
         LocalDateTime createdAt
 ) {}

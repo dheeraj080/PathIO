@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.transaction.annotation.Transactional;
@@ -79,18 +80,14 @@ class UrlOwnershipAndAnalyticsTest {
     }
 
     @Test
-    @DisplayName("Anonymous URL shortening preserves functionality and stores null user_id")
-    void testAnonymousUrlShortening() {
+    @DisplayName("Anonymous URL shortening is rejected (Phase 3: OAuth-only)")
+    void testAnonymousUrlShorteningRejected() {
         SecurityContextHolder.clearContext();
 
         ShortenUrlRequest request = new ShortenUrlRequest("https://example.com/anonymous-page");
-        ShortenUrlResponse response = urlShortenerService.shortenUrl(request);
 
-        String shortCode = response.shortUrl().substring(response.shortUrl().lastIndexOf('/') + 1);
-        UrlEntity entity = urlRepository.findByShortCode(shortCode).orElseThrow();
-
-        assertThat(entity.getUser()).isNull();
-        assertThat(entity.getLongUrl()).isEqualTo("https://example.com/anonymous-page");
+        assertThatThrownBy(() -> urlShortenerService.shortenUrl(request))
+                .isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -151,10 +148,17 @@ class UrlOwnershipAndAnalyticsTest {
         ShortenUrlResponse res1 = urlShortenerService.shortenUrl(new ShortenUrlRequest("https://example.com/u1-stats"));
         String shortCode1 = res1.shortUrl().substring(res1.shortUrl().lastIndexOf('/') + 1);
 
-        // Anonymous URL
-        SecurityContextHolder.clearContext();
-        ShortenUrlResponse anonRes = urlShortenerService.shortenUrl(new ShortenUrlRequest("https://example.com/anon-stats"));
-        String anonCode = anonRes.shortUrl().substring(anonRes.shortUrl().lastIndexOf('/') + 1);
+        // Legacy anonymous row (no longer creatable via the API) — inserted directly to prove
+        // analytics stays owner-scoped even for unowned links.
+        UrlEntity anonEntity = UrlEntity.builder()
+                .id(System.nanoTime())
+                .longUrl("https://example.com/anon-stats")
+                .shortCode("anonstats" + UUID.randomUUID().toString().replace("-", "").substring(0, 8))
+                .clickCount(0L)
+                .user(null)
+                .build();
+        urlRepository.save(anonEntity);
+        String anonCode = anonEntity.getShortCode();
 
         // 1. Owner can query analytics
         UrlAnalyticsResponse stats = urlAnalyticsService.getUrlAnalytics(shortCode1, testUser1.getId());

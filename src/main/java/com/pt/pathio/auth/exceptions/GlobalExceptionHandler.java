@@ -1,6 +1,7 @@
 package com.pt.pathio.auth.exceptions;
 
 import com.pt.pathio.auth.dto.ApiError;
+import com.pt.pathio.exception.ConflictException;
 import com.pt.pathio.exception.ResourceNotFoundException;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,6 +20,8 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.stream.Collectors;
 
@@ -42,10 +45,28 @@ public class GlobalExceptionHandler {
                 ApiError.of(404, "Not Found", ex.getMessage(), request.getRequestURI()));
     }
 
+    @ExceptionHandler({NoResourceFoundException.class, NoHandlerFoundException.class})
+    public ResponseEntity<ApiError> handleNoHandlerFound(Exception ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                ApiError.of(404, "Not Found", "No endpoint found for " + request.getRequestURI(), request.getRequestURI()));
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> handleIllegalArgumentException(IllegalArgumentException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                 ApiError.of(400, "Bad Request", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                ApiError.of(409, "Conflict", ex.getMessage(), request.getRequestURI()));
+    }
+
+    @ExceptionHandler(OAuthOnlyException.class)
+    public ResponseEntity<ApiError> handleOAuthOnly(OAuthOnlyException ex, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                ApiError.of(403, "OAUTH_ONLY", ex.getMessage(), request.getRequestURI()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

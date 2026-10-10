@@ -4,14 +4,14 @@ import com.pt.pathio.auth.dto.LoginRequest;
 import com.pt.pathio.auth.dto.RefreshTokenRequest;
 import com.pt.pathio.auth.dto.TokenResponse;
 import com.pt.pathio.auth.dto.UserDTO;
+import com.pt.pathio.auth.entity.Provider;
 import com.pt.pathio.auth.entity.RefreshToken;
 import com.pt.pathio.auth.entity.User;
+import com.pt.pathio.auth.exceptions.OAuthOnlyException;
 import com.pt.pathio.auth.repository.RefreshTokenRepository;
 import com.pt.pathio.auth.repository.UserRepository;
 import com.pt.pathio.auth.security.CookieService;
 import com.pt.pathio.auth.security.JwtService;
-import com.pt.pathio.auth.service.AuthService;
-import com.pt.pathio.auth.service.UserService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,13 +19,13 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,19 +40,34 @@ import java.util.UUID;
 @Slf4j
 public class AuthController {
 
-    private final AuthService authService;
     private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
     private final JwtService jwtService;
     private final ModelMapper modelMapper;
     private final RefreshTokenRepository refreshTokenRepository;
     private final CookieService cookieService;
-    private final UserService userService;
+
+    @Value("${app.admin.email:}")
+    private String adminEmail;
 
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@RequestBody LoginRequest loginRequest, HttpServletResponse response) {
+        // OAuth-only policy: password login is reserved for the env-provisioned local admin.
+        // Reject anyone else (OAuth users, self-registered local users) before touching credentials.
+        if (loginRequest.email() != null) {
+            userRepository.findByEmail(loginRequest.email().trim()).ifPresent(user -> {
+                boolean isLocalProvider = user.getProvider() == Provider.LOCAL;
+                boolean isEnvAdmin = adminEmail != null
+                        && !adminEmail.isBlank()
+                        && adminEmail.equalsIgnoreCase(user.getEmail());
+                if (!isLocalProvider || !isEnvAdmin) {
+                    throw new OAuthOnlyException("Sign in with Google or GitHub");
+                }
+            });
+        }
+
         // 1. Authenticate via Spring Security
-        Authentication authentication = authenticationManager.authenticate(
+        authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginRequest.email(), loginRequest.password())
         );
 
@@ -212,12 +227,5 @@ public class AuthController {
         }
 
         return Optional.empty();
-    }
-
-    @PostMapping("/register")
-    public ResponseEntity<UserDTO> registerUser(@RequestBody UserDTO userDTO) {
-        // We call authService directly as it handles validation then delegates to userService
-        UserDTO registeredUser = authService.registerUser(userDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(registeredUser);
     }
 }

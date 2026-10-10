@@ -19,6 +19,8 @@ public class PathioMetrics {
     private final Counter cacheHitCounter;
     private final Counter cacheMissCounter;
     private final Counter rateLimitBlockedCounter;
+    private final Counter urlDeletedCounter;
+    private final Counter urlUpdatedCounter;
     private final Timer redirectLatencyTimer;
     private final DistributionSummary clickFlushBatchSummary;
 
@@ -46,6 +48,14 @@ public class PathioMetrics {
         this.rateLimitBlockedCounter = Counter.builder("pathio.ratelimit.blocked")
                 .tag("bucket", "general")
                 .description("Number of requests rejected by rate limiter (HTTP 429)")
+                .register(registry);
+
+        this.urlDeletedCounter = Counter.builder("pathio.url.deleted")
+                .description("Number of short links deleted by their owner")
+                .register(registry);
+
+        this.urlUpdatedCounter = Counter.builder("pathio.url.updated")
+                .description("Number of short links whose destination URL was edited")
                 .register(registry);
 
         this.redirectLatencyTimer = Timer.builder("pathio.url.redirect.latency")
@@ -76,6 +86,14 @@ public class PathioMetrics {
 
     public void incrementRateLimitBlocked() {
         rateLimitBlockedCounter.increment();
+    }
+
+    public void incrementUrlDeleted() {
+        urlDeletedCounter.increment();
+    }
+
+    public void incrementUrlUpdated() {
+        urlUpdatedCounter.increment();
     }
 
     public void recordRedirectLatency(long durationMillis) {

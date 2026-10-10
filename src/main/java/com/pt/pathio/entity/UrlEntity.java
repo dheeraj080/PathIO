@@ -29,7 +29,7 @@ public class UrlEntity implements Persistable<Long> {
     @Column(nullable = false, length = 2048)
     private String longUrl;
 
-    @Column(nullable = false, unique = true, length = 7)
+    @Column(nullable = false, unique = true, length = 32)
     private String shortCode;
 
     @Column(nullable = false)
