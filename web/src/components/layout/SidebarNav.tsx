@@ -1,10 +1,8 @@
 import { NavLink } from 'react-router-dom'
 import {
   BarChart3,
-  KeyRound,
   LayoutDashboard,
   Shield,
-  UserRound,
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
@@ -19,8 +17,6 @@ interface NavItem {
 const BASE_NAV: NavItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
-  { name: 'API keys', href: '/api-keys', icon: KeyRound },
-  { name: 'Profile', href: '/profile', icon: UserRound },
 ]
 
 const ADMIN_NAV: NavItem = { name: 'Administration', href: '/admin/users', icon: Shield }
