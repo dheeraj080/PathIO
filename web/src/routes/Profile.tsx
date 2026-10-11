@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/auth/useAuth'
 import { getErrorMessage } from '@/lib/errors'
@@ -37,18 +38,16 @@ export function Profile() {
   const provider = user.provider ?? 'LOCAL'
 
   return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-
+    <PageContainer className="max-w-3xl">
       <Card>
         <CardBody className="flex items-center gap-4">
           <Avatar name={user.name} image={user.image} size={56} />
           <div className="min-w-0">
             <p className="flex items-center gap-1.5 truncate text-lg font-semibold">
               {user.name ?? 'Unnamed user'}
-              <BadgeCheck className="h-4 w-4 text-brand-500" />
+              <BadgeCheck className="size-4 text-primary" />
             </p>
-            <p className="truncate text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
             <Badge tone="neutral" className="mt-1">
               {provider}
             </Badge>
@@ -57,7 +56,7 @@ export function Profile() {
       </Card>
 
       <Card>
-        <CardHeader title="Edit profile" description="Update your display name." />
+        <CardHeader title="Profile" description="Update your display name." />
         <CardBody>
           <form onSubmit={handleSubmit} className="space-y-4">
             <Input
@@ -75,6 +74,6 @@ export function Profile() {
           </form>
         </CardBody>
       </Card>
-    </div>
+    </PageContainer>
   )
 }

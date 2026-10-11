@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ArrowRight, Link2, Sparkles, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-import { useMyLinks } from '@/features/links/useMyLinks'
+import { useLinkWindow } from '@/features/links/useLinkWindow'
 import { isValidHttpUrl } from '@/features/shorten/ShortenForm'
 
 /**
@@ -16,7 +16,7 @@ import { isValidHttpUrl } from '@/features/shorten/ShortenForm'
 export function FirstLinkNudge({ onStart }: { onStart?: () => void }) {
   const [dismissed, setDismissed] = useState(false)
   const [params, setParams] = useSearchParams()
-  const { data, isLoading, isError } = useMyLinks(0)
+  const { data, isLoading, isError } = useLinkWindow()
 
   const rawPrefill = params.get('prefill')
   const prefill = rawPrefill && isValidHttpUrl(rawPrefill) ? rawPrefill : null
@@ -43,17 +43,17 @@ export function FirstLinkNudge({ onStart }: { onStart?: () => void }) {
   return (
     <section
       aria-label="Getting started"
-      className="flex flex-col gap-4 rounded-xl border border-brand-200 bg-brand-50/60 p-5 sm:flex-row sm:items-center sm:justify-between dark:border-brand-800 dark:bg-brand-950/40"
+      className="flex flex-col gap-4 rounded-xl border border-primary/20 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"
     >
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
+        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           {prefill ? <Sparkles className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
         </span>
         <div>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h2 className="text-sm font-semibold text-foreground">
             {prefill ? 'Finish creating your short link' : 'Create your first short link'}
           </h2>
-          <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             {prefill
               ? 'We kept the URL you started on the home page. It is ready in the shortener below — review it and create your link.'
               : 'Paste a destination URL in the box below to create your first short link. You can add a custom alias too.'}

@@ -79,7 +79,7 @@ export function CreateUserDialog({ open, onClose }: { open: boolean; onClose: ()
           required
           hint="At least 8 characters."
         />
-        {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </form>
     </Modal>
   )

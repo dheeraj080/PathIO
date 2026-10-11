@@ -11,6 +11,7 @@ import { Landing } from '@/routes/Landing'
 import { Login } from '@/routes/Login'
 import { Signup } from '@/routes/Signup'
 import { Dashboard } from '@/routes/Dashboard'
+import { Analytics } from '@/routes/Analytics'
 import { LinkDetail } from '@/routes/LinkDetail'
 import { Profile } from '@/routes/Profile'
 import { ApiKeys } from '@/routes/ApiKeys'
@@ -54,6 +55,14 @@ export function App() {
                     element={
                       <RequireAuth>
                         <Dashboard />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="analytics"
+                    element={
+                      <RequireAuth>
+                        <Analytics />
                       </RequireAuth>
                     }
                   />

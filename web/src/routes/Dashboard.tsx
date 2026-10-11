@@ -1,7 +1,8 @@
 import { useRef } from 'react'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { OverviewCards } from '@/features/analytics/OverviewCards'
 import { FirstLinkNudge } from '@/features/links/FirstLinkNudge'
-import { LinksTable } from '@/features/links/LinksTable'
+import { LinkList } from '@/features/links/LinkList'
 import { ShortenForm } from '@/features/shorten/ShortenForm'
 import { useAuth } from '@/auth/useAuth'
 
@@ -10,18 +11,15 @@ export function Dashboard() {
   const shortenInputRef = useRef<HTMLInputElement>(null)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Welcome back{user?.name ? `, ${user.name}` : ''}.
-        </p>
-      </div>
+    <PageContainer>
+      <p className="text-sm text-muted-foreground">
+        Welcome back{user?.name ? `, ${user.name}` : ''}.
+      </p>
 
       <FirstLinkNudge onStart={() => shortenInputRef.current?.focus()} />
       <ShortenForm inputRef={shortenInputRef} />
       <OverviewCards />
-      <LinksTable />
-    </div>
+      <LinkList />
+    </PageContainer>
   )
 }

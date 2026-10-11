@@ -13,17 +13,13 @@ export function Brand({
   showWordmark?: boolean
 }) {
   return (
-    <Link
-      to={to}
-      className={cn(
-        'flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-100',
-        className,
-      )}
-    >
-      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 text-white shadow-sm">
-        <Link2 className="h-5 w-5" />
+    <Link to={to} className={cn('flex items-center gap-2 text-foreground', className)}>
+      <span className="flex size-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+        <Link2 className="size-5" />
       </span>
-      {showWordmark ? <span className="text-lg tracking-tight">PathIO</span> : null}
+      {showWordmark ? (
+        <span className="text-lg font-extrabold tracking-tight">PathIO</span>
+      ) : null}
     </Link>
   )
 }

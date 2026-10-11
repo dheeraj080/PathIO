@@ -7,6 +7,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Input } from '@/components/ui/Input'
+import { PageContainer } from '@/components/layout/PageContainer'
 import {
   useApiKeys,
   useCreateApiKey,
@@ -66,24 +67,21 @@ export function ApiKeys() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">API keys</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          Programmatic access with an <code className="text-xs">X-API-Key</code> header. Keys are
-          stored as digests, so the plaintext is shown only once — save it when you create it.
-        </p>
-      </div>
+    <PageContainer className="max-w-3xl">
+      <p className="text-sm text-muted-foreground">
+        Programmatic access with an <code className="text-xs">X-API-Key</code> header. Keys are
+        stored as digests, so the plaintext is shown only once — save it when you create it.
+      </p>
 
       {created ? (
-        <Card className="border-amber-300 dark:border-amber-700/60">
+        <Card className="border-amber-500/40">
           <CardBody className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">
                   Copy your key now — it is shown only once.
                 </p>
-                <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
+                <p className="mt-0.5 text-sm text-muted-foreground">
                   Store it somewhere safe; you won&apos;t be able to view it again.
                 </p>
               </div>
@@ -99,7 +97,7 @@ export function ApiKeys() {
             <div className="flex items-center gap-2">
               <code
                 data-testid="new-api-key"
-                className="min-w-0 flex-1 truncate rounded-lg bg-slate-100 px-3 py-2 font-mono text-sm dark:bg-slate-900"
+                className="min-w-0 flex-1 truncate rounded-lg bg-muted px-3 py-2 font-mono text-sm"
               >
                 {created}
               </code>
@@ -130,14 +128,14 @@ export function ApiKeys() {
             <div className="w-full sm:w-44">
               <label
                 htmlFor="api-key-expiry"
-                className="mb-1.5 block text-sm font-medium text-slate-700 dark:text-slate-200"
+                className="mb-1.5 block text-sm font-medium text-foreground"
               >
                 Expiry
               </label>
               <select
                 id="api-key-expiry"
                 name="api-key-expiry"
-                className="block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+                className="block h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-foreground transition-colors focus:border-ring"
                 value={expiry}
                 onChange={(event) => setExpiry(event.target.value)}
               >
@@ -160,7 +158,7 @@ export function ApiKeys() {
         <CardHeader title="Your API keys" description="Unused or leaked keys can be revoked here." />
         <CardBody>
           {isLoading ? (
-            <p className="text-sm text-slate-500 dark:text-slate-400">Loading…</p>
+            <p className="text-sm text-muted-foreground">Loading…</p>
           ) : !keys || keys.length === 0 ? (
             <EmptyState
               icon={<KeyRound className="h-8 w-8" />}
@@ -168,7 +166,7 @@ export function ApiKeys() {
               description="Create your first key to start using the API programmatically."
             />
           ) : (
-            <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+            <ul className="divide-y divide-border">
               {keys.map((key) => {
                 const status = statusOf(key)
                 return (
@@ -178,12 +176,12 @@ export function ApiKeys() {
                   >
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="truncate font-medium text-slate-900 dark:text-slate-100">
+                        <span className="truncate font-medium text-foreground">
                           {key.name}
                         </span>
                         <Badge tone={status.tone}>{status.label}</Badge>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
+                      <p className="text-xs text-muted-foreground">
                         Created {formatDate(key.createdAt)} ·{' '}
                         {key.expiresAt ? `Expires ${formatDate(key.expiresAt)}` : 'No expiry'} ·{' '}
                         {key.lastUsedAt
@@ -222,6 +220,6 @@ export function ApiKeys() {
         onConfirm={handleRevoke}
         onClose={() => setConfirming(null)}
       />
-    </div>
+    </PageContainer>
   )
 }

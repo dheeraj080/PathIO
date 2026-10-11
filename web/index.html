@@ -4,11 +4,27 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f5f4ef" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1e1e1e" media="(prefers-color-scheme: dark)" />
     <meta
       name="description"
       content="PathIO is a URL shortener with custom aliases and built-in click analytics: total and unique clicks, click history, referrers, and devices."
     />
     <title>PathIO — URL Shortener</title>
+    <script>
+      // Apply the stored/system theme before first paint to avoid a flash.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('pathio-theme')
+          var isDark = stored
+            ? stored === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+          if (isDark) document.documentElement.classList.add('dark')
+        } catch (error) {
+          /* localStorage/matchMedia unavailable — fall back to light theme */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

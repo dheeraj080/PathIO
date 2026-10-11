@@ -25,7 +25,7 @@ export function useShortenLink() {
     onSuccess: () => {
       toast.push('Short link created', 'success')
       void queryClient.invalidateQueries({ queryKey: ['urls', 'me'] })
-      void queryClient.invalidateQueries({ queryKey: ['analytics', 'overview'] })
+      void queryClient.invalidateQueries({ queryKey: ['analytics'] })
     },
     onError: (error) => toast.push(getErrorMessage(error), 'error'),
   })

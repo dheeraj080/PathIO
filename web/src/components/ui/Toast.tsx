@@ -45,13 +45,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={toast.id}
             role="status"
             className={cn(
-              'pointer-events-auto flex items-start gap-2 rounded-lg border px-4 py-3 text-sm shadow-lg animate-fade-in',
+              'pointer-events-auto flex items-start gap-2 rounded-xl border-[0.5px] px-4 py-3 text-sm shadow-soft animate-fade-in',
               toast.tone === 'success' &&
-                'border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-200',
+                'border-green-700/20 bg-green-100 text-green-700 dark:border-green-300/20 dark:bg-green-950 dark:text-green-300',
               toast.tone === 'error' &&
-                'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200',
-              toast.tone === 'info' &&
-                'border-slate-200 bg-white text-slate-800 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100',
+                'border-red-700/20 bg-red-100 text-red-700 dark:border-red-300/20 dark:bg-red-950 dark:text-red-300',
+              toast.tone === 'info' && 'border-border bg-card text-card-foreground',
             )}
           >
             {toast.tone === 'success' ? <CheckCircle2 className="mt-0.5 h-4 w-4" /> : null}

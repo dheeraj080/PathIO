@@ -123,60 +123,56 @@ function ProductPreview() {
       aria-label="Illustrative preview of the PathIO dashboard showing a short link and an example click chart. Figures are examples, not real data."
       className="relative"
     >
-      <span className="absolute right-3 top-3 z-10 rounded-full border border-slate-200 bg-white/90 px-2.5 py-0.5 text-xs font-medium text-slate-500 dark:border-slate-700 dark:bg-slate-800/90 dark:text-slate-400">
+      <span className="absolute right-3 top-3 z-10 rounded-md border-[0.5px] border-border bg-card/90 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
         Preview
       </span>
 
       <div
         aria-hidden="true"
-        className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
+        className="rounded-2xl border-[0.5px] border-border bg-card p-5"
       >
-        <div className="flex items-center gap-2 text-xs text-slate-400">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="h-2.5 w-2.5 rounded-full bg-red-400" />
           <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
           <span className="ml-2 truncate">PathIO dashboard</span>
         </div>
 
-        <div className="mt-4 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2 dark:border-slate-700 dark:bg-slate-800">
-          <Link2 className="h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
-          <span className="truncate font-mono text-sm text-slate-600 dark:text-slate-300">
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-border bg-muted p-2">
+          <Link2 className="h-4 w-4 shrink-0 text-primary" />
+          <span className="truncate font-mono text-sm text-muted-foreground">
             example.com/campaigns/spring-launch
           </span>
-          <span className="ml-auto shrink-0 rounded-md bg-brand-600 px-2.5 py-1 text-xs font-medium text-white">
+          <span className="ml-auto shrink-0 rounded-md bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground">
             Shorten
           </span>
         </div>
 
-        <div className="mt-4 rounded-lg border border-brand-200 bg-brand-50/60 p-3 text-sm dark:border-brand-800 dark:bg-brand-950/40">
-          <div className="flex items-center gap-2 font-mono font-medium text-brand-700 dark:text-brand-300">
+        <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+          <div className="flex items-center gap-2 font-mono font-medium text-primary">
             <Link2 className="h-4 w-4" />
             /launch-day
           </div>
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3">
-          <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400">Total clicks</p>
-            <p className="text-lg font-semibold tabular-nums text-slate-800 dark:text-slate-100">
-              128
-            </p>
+          <div className="rounded-lg border border-border p-3">
+            <p className="text-xs text-muted-foreground">Total clicks</p>
+            <p className="text-lg font-semibold tabular-nums text-foreground">128</p>
           </div>
-          <div className="rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-            <p className="text-xs text-slate-500 dark:text-slate-400">Unique</p>
-            <p className="text-lg font-semibold tabular-nums text-slate-800 dark:text-slate-100">
-              96
-            </p>
+          <div className="rounded-lg border border-border p-3">
+            <p className="text-xs text-muted-foreground">Unique</p>
+            <p className="text-lg font-semibold tabular-nums text-foreground">96</p>
           </div>
         </div>
 
         <div className="mt-5">
-          <p className="text-xs text-slate-500 dark:text-slate-400">Clicks · last 7 days</p>
+          <p className="text-xs text-muted-foreground">Clicks · last 7 days</p>
           <div className="mt-2 flex h-20 items-end gap-2">
             {bars.map((height, index) => (
               <span
                 key={index}
-                className="flex-1 rounded-t bg-brand-400/80 dark:bg-brand-500/70"
+                className="flex-1 rounded-t bg-chart-clicks/80"
                 style={{ height: `${height}%` }}
               />
             ))}
@@ -184,7 +180,7 @@ function ProductPreview() {
         </div>
       </div>
 
-      <p className="mt-3 text-center text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-3 text-center text-xs text-muted-foreground">
         Example interface — the figures shown are illustrative, not your account data.
       </p>
     </div>
@@ -203,13 +199,11 @@ function SectionHeading({
   return (
     <div className="mx-auto max-w-2xl text-center">
       {eyebrow ? (
-        <p className="text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-          {eyebrow}
-        </p>
+        <p className="text-xs font-semibold uppercase tracking-wider text-primary">{eyebrow}</p>
       ) : null}
       <h2 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{title}</h2>
       {description ? (
-        <p className="mt-3 text-slate-600 dark:text-slate-300">{description}</p>
+        <p className="mt-3 text-muted-foreground">{description}</p>
       ) : null}
     </div>
   )
@@ -230,21 +224,23 @@ export function Landing() {
   return (
     <>
       {/* Hero */}
-      <section className="border-b border-slate-200 dark:border-slate-800">
-        <div className="mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-16 lg:grid-cols-2 lg:py-24">
+      <section className="relative overflow-hidden border-b border-border">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/10 to-transparent"
+        />
+        <div className="relative mx-auto grid w-full max-w-6xl items-center gap-12 px-4 py-16 lg:grid-cols-2 lg:py-24">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
+            <span className="inline-flex items-center gap-2 rounded-full border-[0.5px] border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
               Short links · Custom aliases · Click analytics
             </span>
 
             <h1 className="mt-5 text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl">
               Shorten links.
-              <span className="block text-brand-600 dark:text-brand-400">
-                Understand every click.
-              </span>
+              <span className="block text-primary">Understand every click.</span>
             </h1>
 
-            <p className="mt-5 max-w-xl text-lg text-slate-600 dark:text-slate-300">
+            <p className="mt-5 max-w-xl text-lg text-muted-foreground">
               Create short links, optionally choose a custom alias, copy and share them, and review
               the click analytics for every link you own.
             </p>
@@ -259,10 +255,10 @@ export function Landing() {
                   Sign in to your dashboard
                 </Button>
               </Link>
-              <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500 dark:text-slate-400">
+              <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
                 {HERO_POINTS.map((item) => (
                   <li key={item} className="inline-flex items-center gap-1.5">
-                    <Check className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+                    <Check className="h-4 w-4 text-primary" />
                     {item}
                   </li>
                 ))}
@@ -286,23 +282,20 @@ export function Landing() {
           {FEATURES.map(({ icon: Icon, title, text }) => (
             <div
               key={title}
-              className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"
+              className="rounded-2xl border-[0.5px] border-border bg-card p-6"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600 dark:bg-brand-950/60 dark:text-brand-300">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Icon className="h-5 w-5" />
               </span>
               <h3 className="mt-4 text-base font-semibold">{title}</h3>
-              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{text}</p>
+              <p className="mt-1.5 text-sm text-muted-foreground">{text}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* How it works */}
-      <section
-        id="how"
-        className="border-y border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
-      >
+      <section id="how" className="border-y border-border bg-card">
         <div className="mx-auto w-full max-w-6xl px-4 py-20">
           <SectionHeading
             eyebrow="How it works"
@@ -314,16 +307,16 @@ export function Landing() {
             {STEPS.map(({ icon: Icon, title, text }, index) => (
               <li
                 key={title}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-700 dark:bg-slate-900"
+                className="rounded-2xl border-[0.5px] border-border bg-card p-6"
               >
                 <div className="flex items-center gap-3">
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
                     {index + 1}
                   </span>
-                  <Icon className="h-5 w-5 text-slate-400 dark:text-slate-500" />
+                  <Icon className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <h3 className="mt-4 text-base font-semibold">{title}</h3>
-                <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{text}</p>
+                <p className="mt-1.5 text-sm text-muted-foreground">{text}</p>
               </li>
             ))}
           </ol>
@@ -342,39 +335,36 @@ export function Landing() {
           {USE_CASES.map(({ icon: Icon, title, text }) => (
             <div
               key={title}
-              className="rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-700 dark:bg-slate-900"
+              className="rounded-2xl border-[0.5px] border-border bg-card p-6"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                 <Icon className="h-5 w-5" />
               </span>
               <h3 className="mt-4 text-base font-semibold">{title}</h3>
-              <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">{text}</p>
+              <p className="mt-1.5 text-sm text-muted-foreground">{text}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* FAQ */}
-      <section
-        id="faq"
-        className="border-y border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950"
-      >
+      <section id="faq" className="border-y border-border bg-card">
         <div className="mx-auto w-full max-w-3xl px-4 py-20">
           <SectionHeading eyebrow="FAQ" title="Questions, answered" />
 
-          <div className="mt-10 divide-y divide-slate-200 rounded-2xl border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+          <div className="mt-10 divide-y divide-border rounded-2xl border-[0.5px] border-border bg-card">
             {FAQ.map((item) => (
               <details key={item.q} className="group px-5 py-4 [&_summary::-webkit-details-marker]:hidden">
-                <summary className="flex cursor-pointer items-center justify-between gap-4 rounded text-base font-medium text-slate-800 focus-visible:outline dark:text-slate-100">
+                <summary className="flex cursor-pointer items-center justify-between gap-4 rounded text-base font-medium text-foreground focus-visible:outline">
                   {item.q}
                   <span
                     aria-hidden="true"
-                    className="text-slate-400 transition-transform group-open:rotate-45 dark:text-slate-500"
+                    className="text-muted-foreground transition-transform group-open:rotate-45"
                   >
                     +
                   </span>
                 </summary>
-                <p className="mt-3 text-sm text-slate-600 dark:text-slate-300">{item.a}</p>
+                <p className="mt-3 text-sm text-muted-foreground">{item.a}</p>
               </details>
             ))}
           </div>
@@ -383,11 +373,11 @@ export function Landing() {
 
       {/* Final CTA */}
       <section className="px-4 py-20">
-        <div className="mx-auto w-full max-w-4xl rounded-3xl border border-slate-200 bg-white px-8 py-14 text-center dark:border-slate-700 dark:bg-slate-900">
+        <div className="mx-auto w-full max-w-4xl rounded-3xl border-[0.5px] border-primary/20 bg-primary/5 px-8 py-14 text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             Create your first short link
           </h2>
-          <p className="mx-auto mt-3 max-w-xl text-slate-600 dark:text-slate-300">
+          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
             Sign in with Google or GitHub and start shortening links with analytics.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">

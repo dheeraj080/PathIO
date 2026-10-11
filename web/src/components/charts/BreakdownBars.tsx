@@ -9,7 +9,7 @@ export function BreakdownBars({
   emptyLabel?: string
 }) {
   if (!items.length) {
-    return <p className="text-sm text-slate-500 dark:text-slate-400">{emptyLabel}</p>
+    return <p className="text-sm text-muted-foreground">{emptyLabel}</p>
   }
 
   const max = Math.max(1, ...items.map((item) => item.clicks))
@@ -19,16 +19,16 @@ export function BreakdownBars({
       {items.map((item) => (
         <li key={`${item.value}-${item.clicks}`}>
           <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-            <span className="truncate text-slate-700 dark:text-slate-200">
+            <span className="truncate text-foreground">
               {item.value || 'Direct / unknown'}
             </span>
-            <span className="tabular-nums text-slate-500 dark:text-slate-400">
+            <span className="tabular-nums text-muted-foreground">
               {formatCount(item.clicks)}
             </span>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700">
+          <div className="h-2 overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-brand-500"
+              className="h-full rounded-full bg-chart-clicks"
               style={{ width: `${(item.clicks / max) * 100}%` }}
             />
           </div>

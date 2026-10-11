@@ -50,22 +50,22 @@ export function Signup() {
         />
       </div>
 
-      <ul className="mt-6 space-y-2.5 text-sm text-slate-600 dark:text-slate-300">
+      <ul className="mt-6 space-y-2.5 text-sm text-muted-foreground">
         {BENEFITS.map(({ icon: Icon, text }) => (
           <li key={text} className="flex items-center gap-2">
             <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-              <Icon className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+              <Icon className="h-4 w-4 text-primary" />
             </span>
             {text}
           </li>
         ))}
       </ul>
 
-      <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         Already have an account?{' '}
         <Link
           to={`/login?redirect=${encodeURIComponent(redirect)}`}
-          className="font-medium text-brand-600 hover:underline dark:text-brand-400"
+          className="font-medium text-primary hover:underline"
         >
           Sign in
         </Link>

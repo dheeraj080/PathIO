@@ -1,39 +1,98 @@
 import type { Config } from 'tailwindcss'
 
+/**
+ * Semantic colours resolve to RGB channel variables defined in index.css and
+ * wrapped with `<alpha-value>` so Tailwind's opacity modifiers work
+ * (e.g. bg-primary/10, ring-ring/40).
+ */
+const token = (name: string) => `rgb(var(${name}) / <alpha-value>)`
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   darkMode: 'class',
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#eef2ff',
-          100: '#e0e7ff',
-          200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
-          500: '#6366f1',
-          600: '#4f46e5',
-          700: '#4338ca',
-          800: '#3730a3',
-          900: '#312e81',
-          950: '#1e1b4b',
+        background: token('--background'),
+        foreground: token('--foreground'),
+        card: {
+          DEFAULT: token('--card'),
+          foreground: token('--card-foreground'),
         },
-        surface: {
-          light: '#ffffff',
-          muted: '#f8fafc',
-          border: '#e2e8f0',
-          dark: '#0f172a',
-          darkMuted: '#1e293b',
-          darkBorder: '#334155',
+        popover: {
+          DEFAULT: token('--popover'),
+          foreground: token('--popover-foreground'),
         },
-        // Semantic tokens (also available as CSS var: var(--color-name))
-        border: 'var(--color-border, var(--border))',
-        radius: 'var(--radius, var(--border))',
-        shadow: 'var(--shadow, none)',
+        primary: {
+          DEFAULT: token('--primary'),
+          foreground: token('--primary-foreground'),
+        },
+        secondary: {
+          DEFAULT: token('--secondary'),
+          foreground: token('--secondary-foreground'),
+        },
+        muted: {
+          DEFAULT: token('--muted'),
+          foreground: token('--muted-foreground'),
+        },
+        accent: {
+          DEFAULT: token('--accent'),
+          foreground: token('--accent-foreground'),
+        },
+        destructive: {
+          DEFAULT: token('--destructive'),
+          foreground: token('--destructive-foreground'),
+        },
+        success: {
+          DEFAULT: token('--success'),
+          foreground: token('--success-foreground'),
+        },
+        border: token('--border'),
+        input: token('--input'),
+        ring: token('--ring'),
+        sidebar: {
+          DEFAULT: token('--sidebar'),
+          foreground: token('--sidebar-foreground'),
+          primary: token('--sidebar-primary'),
+          'primary-foreground': token('--sidebar-primary-foreground'),
+          accent: token('--sidebar-accent'),
+          'accent-foreground': token('--sidebar-accent-foreground'),
+          border: token('--sidebar-border'),
+          ring: token('--sidebar-ring'),
+        },
+        chart: {
+          clicks: token('--chart-clicks'),
+          locations: token('--chart-locations'),
+          devices: token('--chart-devices'),
+          os: token('--chart-os'),
+          referrers: token('--chart-referrers'),
+          'top-links': token('--chart-top-links'),
+        },
+      },
+      borderRadius: {
+        sm: 'calc(var(--radius) - 4px)',
+        md: 'calc(var(--radius) - 2px)',
+        lg: 'var(--radius)',
+        xl: 'calc(var(--radius) + 4px)',
+        '2xl': 'calc(var(--radius) + 8px)',
+        '3xl': 'calc(var(--radius) + 12px)',
+        '4xl': 'calc(var(--radius) + 16px)',
+      },
+      boxShadow: {
+        soft: 'var(--shadow-soft)',
+        xs: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: [
+          'Manrope Variable',
+          'Manrope',
+          'ui-sans-serif',
+          'system-ui',
+          '-apple-system',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif',
+        ],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       keyframes: {
@@ -46,13 +105,6 @@ export default {
         'fade-in': 'fade-in 150ms ease-out',
       },
     },
-    // Inject CSS var definitions into the tailwind theme so components can use
-    // `theme('color.border')` etc.  Fall back to the static tokens above.
-    variables: () => ({
-      '--color-border': 'var(--border)',
-      '--color-radius': 'var(--radius)',
-      '--color-shadow': 'var(--shadow-sm)',
-    }),
   },
   plugins: [],
 } satisfies Config

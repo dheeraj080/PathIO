@@ -5,9 +5,9 @@ import { deleteUser, listUsers } from '@/api/users.api'
 import { Avatar } from '@/components/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
-import { Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { useToast } from '@/components/ui/Toast'
 import { CreateUserDialog } from '@/features/admin/CreateUserDialog'
 import { useAuth } from '@/auth/useAuth'
@@ -38,97 +38,89 @@ export function UsersTable() {
   })
 
   return (
-    <Card>
-      <CardHeader
-        title="Users"
-        description="All registered accounts."
-        action={
-          <Button size="sm" onClick={() => setCreating(true)}>
-            <UserPlus className="h-4 w-4" />
-            Create user
-          </Button>
-        }
-      />
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          {data ? `${data.length} registered ${data.length === 1 ? 'account' : 'accounts'}` : 'Registered accounts'}
+        </p>
+        <Button size="sm" onClick={() => setCreating(true)}>
+          <UserPlus className="size-4" />
+          Create user
+        </Button>
+      </div>
 
       {isLoading ? (
-        <CardBody>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Loading users…</p>
-        </CardBody>
+        <div className="flex flex-col gap-3">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-4 rounded-xl border-[0.5px] border-border bg-card p-4 md:p-5"
+            >
+              <Skeleton className="size-9 rounded-full" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-3 w-56" />
+              </div>
+            </div>
+          ))}
+        </div>
       ) : isError ? (
-        <CardBody>
-          <p className="text-sm text-red-600 dark:text-red-400">{getErrorMessage(error)}</p>
-        </CardBody>
+        <div className="rounded-xl border-[0.5px] border-border bg-card p-6">
+          <p className="text-sm text-destructive">{getErrorMessage(error)}</p>
+        </div>
       ) : !data || data.length === 0 ? (
-        <CardBody>
-          <EmptyState icon={<Users2 className="h-8 w-8" />} title="No users found" />
-        </CardBody>
+        <EmptyState icon={<Users2 className="size-6" />} title="No users found" />
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="border-b border-slate-100 text-xs uppercase text-slate-500 dark:border-slate-700 dark:text-slate-400">
-              <tr>
-                <th className="px-5 py-3 font-medium">User</th>
-                <th className="px-5 py-3 font-medium">Provider</th>
-                <th className="hidden px-5 py-3 font-medium md:table-cell">Roles</th>
-                <th className="hidden px-5 py-3 font-medium lg:table-cell">Created</th>
-                <th className="px-5 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-              {data.map((user) => {
-                const isSelf = currentUser?.id === user.id
-                return (
-                  <tr key={user.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/40">
-                    <td className="px-5 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar name={user.name} image={user.image} size={32} />
-                        <div className="min-w-0">
-                          <p className="truncate font-medium text-slate-800 dark:text-slate-100">
-                            {user.name ?? '—'}
-                            {isSelf ? <span className="ml-1 text-xs text-slate-400">(you)</span> : null}
-                          </p>
-                          <p className="truncate text-xs text-slate-500 dark:text-slate-400">
-                            {user.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3">
-                      <Badge tone="neutral">{user.provider ?? 'LOCAL'}</Badge>
-                    </td>
-                    <td className="hidden px-5 py-3 md:table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {(user.roles ?? []).map((role) => (
-                          <Badge key={role.id ?? role.name} tone={role.name === 'ROLE_ADMIN' ? 'brand' : 'neutral'}>
-                            {role.name === 'ROLE_ADMIN' ? (
-                              <Shield className="mr-1 h-3 w-3" />
-                            ) : null}
-                            {role.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="hidden px-5 py-3 text-slate-500 lg:table-cell dark:text-slate-400">
-                      {formatDate(user.createdAt)}
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="px-2 text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
-                        aria-label={`Delete ${user.email}`}
-                        disabled={isSelf}
-                        title={isSelf ? 'You cannot delete your own account' : undefined}
-                        onClick={() => setDeleting(user)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+        <div className="flex flex-col gap-3">
+          {data.map((user) => {
+            const isSelf = currentUser?.id === user.id
+            return (
+              <div
+                key={user.id}
+                className="flex items-center gap-4 rounded-xl border-[0.5px] border-border bg-card p-4 transition-shadow hover:shadow-soft md:p-5"
+              >
+                <Avatar name={user.name} image={user.image} size={36} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-foreground">
+                    {user.name ?? '—'}
+                    {isSelf ? <span className="ml-1 text-xs text-muted-foreground">(you)</span> : null}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">{user.email}</p>
+                </div>
+
+                <div className="hidden flex-wrap gap-1 md:flex">
+                  {(user.roles ?? []).map((role) => (
+                    <Badge
+                      key={role.id ?? role.name}
+                      tone={role.name === 'ROLE_ADMIN' ? 'brand' : 'neutral'}
+                    >
+                      {role.name === 'ROLE_ADMIN' ? <Shield className="mr-1 size-3" /> : null}
+                      {role.name}
+                    </Badge>
+                  ))}
+                </div>
+
+                <Badge tone="neutral" className="hidden shrink-0 lg:inline-flex">
+                  {user.provider ?? 'LOCAL'}
+                </Badge>
+                <span className="hidden shrink-0 text-xs text-muted-foreground xl:inline">
+                  {formatDate(user.createdAt)}
+                </span>
+
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  className="text-destructive hover:bg-destructive/10"
+                  aria-label={`Delete ${user.email}`}
+                  disabled={isSelf}
+                  title={isSelf ? 'You cannot delete your own account' : undefined}
+                  onClick={() => setDeleting(user)}
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -147,6 +139,6 @@ export function UsersTable() {
           if (deleting) deleteMutation.mutate(deleting.id)
         }}
       />
-    </Card>
+    </div>
   )
 }

@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from '@/App'
 import { USE_MOCKS } from '@/lib/config'
+import '@fontsource-variable/manrope'
 import '@/index.css'
 
 async function enableMocking(): Promise<void> {

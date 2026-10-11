@@ -2,8 +2,8 @@ import { forwardRef, type ButtonHTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 import { Spinner } from '@/components/ui/Spinner'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
-export type ButtonSize = 'sm' | 'md' | 'lg'
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'link'
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon' | 'icon-sm'
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant
@@ -12,20 +12,21 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary:
-    'bg-brand-600 text-white hover:bg-brand-700 focus-visible:outline-brand-600 disabled:bg-brand-300',
+  primary: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90',
   secondary:
-    'bg-white text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-100 dark:ring-slate-600 dark:hover:bg-slate-700',
-  ghost:
-    'bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
+    'border-[0.5px] border-input bg-background text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground',
+  ghost: 'bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground',
   danger:
-    'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600 disabled:bg-red-300',
+    'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/30',
+  link: 'bg-transparent text-primary underline-offset-4 hover:underline',
 }
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: 'px-2.5 py-1.5 text-xs gap-1.5',
-  md: 'px-3.5 py-2 text-sm gap-2',
-  lg: 'px-5 py-2.5 text-base gap-2',
+  sm: 'h-8 gap-1.5 rounded-md px-3 text-xs',
+  md: 'h-9 gap-2 rounded-md px-4 text-sm',
+  lg: 'h-10 gap-2 rounded-md px-5 text-sm',
+  icon: 'h-9 w-9 rounded-md',
+  'icon-sm': 'h-8 w-8 rounded-md',
 }
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -36,9 +37,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       className={cn(
-        'inline-flex items-center justify-center rounded-lg font-medium transition-colors',
-        'focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
-        'disabled:cursor-not-allowed disabled:opacity-70',
+        'inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-colors',
+        'outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40',
+        'disabled:pointer-events-none disabled:opacity-50',
+        '[&_svg]:pointer-events-none [&_svg]:shrink-0',
         VARIANTS[variant],
         SIZES[size],
         className,

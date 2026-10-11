@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 
+/** Centered empty/placeholder block with an icon chip and optional action. */
 export function EmptyState({
   icon,
   title,
@@ -17,15 +18,19 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-slate-300 px-6 py-12 text-center dark:border-slate-600',
+        'flex flex-col items-center justify-center gap-4 px-6 py-12 text-center',
         className,
       )}
     >
-      {icon ? <div className="text-slate-400 dark:text-slate-500">{icon}</div> : null}
-      <div>
-        <p className="text-sm font-medium text-slate-800 dark:text-slate-200">{title}</p>
+      {icon ? (
+        <span className="flex size-14 items-center justify-center rounded-2xl border-[0.5px] border-border bg-muted text-muted-foreground">
+          {icon}
+        </span>
+      ) : null}
+      <div className="flex flex-col gap-1">
+        <p className="text-base font-semibold text-foreground">{title}</p>
         {description ? (
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>
+          <p className="mx-auto max-w-sm text-sm text-muted-foreground">{description}</p>
         ) : null}
       </div>
       {action}

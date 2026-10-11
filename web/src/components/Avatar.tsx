@@ -29,7 +29,7 @@ export function Avatar({
 
   return (
     <span
-      className="inline-flex items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-900/60 dark:text-brand-200"
+      className="inline-flex items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary"
       style={{ width: size, height: size }}
       aria-hidden="true"
     >

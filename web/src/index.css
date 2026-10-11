@@ -2,44 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CSS custom properties (semantic tokens) — light-first, expanded by Tailwind */
+/*
+ * Design tokens — "terracotta" warm-cream palette, ported from the reference
+ * design system (internal/url-shortener-ui).
+ *
+ * Colours are stored as space-separated RGB channels so Tailwind can apply
+ * opacity modifiers (e.g. bg-primary/10, ring-ring/40). Components consume them
+ * through semantic utilities (bg-background, text-muted-foreground, ...) and
+ * never reference raw colours directly.
+ */
 :root {
-  --bg-page: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-muted: #f1f5f9;
-  --border: #e2e8f0;
-  --text-primary: #0f172a;
-  --text-muted: #64748b;
-  --accent-primary: #6366f1;
-  --accent-primary-hover: #4f46e5;
+  --background: 255 255 255;
+  --foreground: 45 43 40;
+  --card: 255 255 255;
+  --card-foreground: 45 43 40;
+  --popover: 255 255 255;
+  --popover-foreground: 45 43 40;
+  --primary: 217 106 71;
+  --primary-foreground: 255 255 255;
+  --secondary: 229 225 216;
+  --secondary-foreground: 45 43 40;
+  --muted: 243 241 235;
+  --muted-foreground: 138 136 130;
+  --accent: 245 244 239;
+  --accent-foreground: 45 43 40;
+  --destructive: 204 37 37;
+  --destructive-foreground: 255 255 255;
+  --success: 22 163 74;
+  --success-foreground: 255 255 255;
+  --border: 209 202 190;
+  --input: 209 202 190;
+  --ring: 217 106 71;
+
+  --sidebar: 245 244 239;
+  --sidebar-foreground: 45 43 40;
+  --sidebar-primary: 217 106 71;
+  --sidebar-primary-foreground: 255 255 255;
+  --sidebar-accent: 229 225 216;
+  --sidebar-accent-foreground: 45 43 40;
+  --sidebar-border: 209 202 190;
+  --sidebar-ring: 217 106 71;
+
+  --chart-clicks: 179 86 34;
+  --chart-locations: 52 211 153;
+  --chart-devices: 250 204 21;
+  --chart-os: 34 211 238;
+  --chart-referrers: 244 114 182;
+  --chart-top-links: 129 140 248;
+
   --radius: 0.5rem;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  --focus-ring: 2px solid var(--accent-primary);
+  --shadow-soft: 0 2px 12px -2px rgba(0, 0, 0, 0.04);
+  --focus-ring: 2px solid rgb(var(--ring));
 }
 
 .dark {
-  --bg-page: #0f172a;
-  --bg-surface: #1e293b;
-  --bg-muted: #334155;
-  --border: #334155;
-  --text-primary: #f1f5f9;
-  --text-muted: #94a3b8;
-  --accent-primary: #a5b4fc;
-  --accent-primary-hover: #818cf8;
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
-  --focus-ring: 2px solid var(--accent-primary);
+  --background: 30 30 30;
+  --foreground: 234 230 223;
+  --card: 30 30 30;
+  --card-foreground: 234 230 223;
+  --popover: 30 30 30;
+  --popover-foreground: 234 230 223;
+  --primary: 201 93 60;
+  --primary-foreground: 255 255 255;
+  --secondary: 59 58 54;
+  --secondary-foreground: 234 230 223;
+  --muted: 61 59 54;
+  --muted-foreground: 155 151 143;
+  --accent: 59 58 54;
+  --accent-foreground: 234 230 223;
+  --destructive: 201 51 54;
+  --destructive-foreground: 255 255 255;
+  --success: 34 197 94;
+  --success-foreground: 255 255 255;
+  --border: 51 50 47;
+  --input: 51 50 47;
+  --ring: 201 93 60;
+
+  --sidebar: 18 18 18;
+  --sidebar-foreground: 234 230 223;
+  --sidebar-primary: 201 93 60;
+  --sidebar-primary-foreground: 255 255 255;
+  --sidebar-accent: 59 58 54;
+  --sidebar-accent-foreground: 234 230 223;
+  --sidebar-border: 51 50 47;
+  --sidebar-ring: 201 93 60;
+
+  --chart-clicks: 249 115 22;
+  --chart-locations: 52 211 153;
+  --chart-devices: 250 204 21;
+  --chart-os: 34 211 238;
+  --chart-referrers: 244 114 182;
+  --chart-top-links: 129 140 248;
+
+  --shadow-soft: 0 2px 12px -2px rgba(0, 0, 0, 0.28);
+  --focus-ring: 2px solid rgb(var(--ring));
 }
 
-/* Apply base variables via Tailwind existing classes — do not override existing utilities */
 @layer base {
+  /* Default border colour matches the theme tokens. */
+  * {
+    @apply border-border;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100;
+    @apply bg-background font-sans text-foreground antialiased;
   }
 
   /* Focus ring — visible, consistent across all interactive elements */
@@ -59,5 +129,27 @@
       animation-iteration-count: 1 !important;
       transition-duration: 0.01ms !important;
     }
+  }
+}
+
+/* Continuously scrolling column used by the links empty state. */
+@keyframes vertical-scroll {
+  0% {
+    transform: translateY(0);
+  }
+
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+@layer utilities {
+  .animate-vertical-scroll {
+    animation: vertical-scroll 120s linear infinite;
+  }
+
+  /* Hairline divider used by the reference card/page system. */
+  .hairline-divider {
+    border-bottom: 0.5px solid rgb(var(--border));
   }
 }

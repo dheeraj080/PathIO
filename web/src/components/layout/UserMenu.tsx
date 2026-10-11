@@ -54,7 +54,7 @@ export function UserMenu() {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="flex items-center gap-2 rounded-full p-0.5 pr-2 hover:bg-slate-100 dark:hover:bg-slate-800"
+        className="flex items-center gap-2 rounded-full p-0.5 pr-2 hover:bg-accent"
         aria-haspopup="menu"
         aria-expanded={open}
       >
@@ -69,20 +69,19 @@ export function UserMenu() {
           ref={menuRef}
           role="menu"
           className={cn(
-            'absolute right-0 z-40 mt-2 w-56 animate-fade-in overflow-hidden rounded-xl border bg-white py-1 shadow-lg',
-            'border-slate-200 dark:border-slate-700 dark:bg-slate-800',
+            'absolute right-0 z-40 mt-2 w-56 animate-fade-in overflow-hidden rounded-xl border-[0.5px] border-border bg-popover py-1 text-popover-foreground shadow-soft',
           )}
           onPointerDown={(event) => event.stopPropagation()}
         >
-          <div className="border-b border-slate-100 px-4 py-3 dark:border-slate-700">
+          <div className="border-b border-border px-4 py-3">
             <p className="truncate text-sm font-medium">{user.name ?? 'Account'}</p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+            <p className="truncate text-xs text-muted-foreground">{user.email}</p>
           </div>
           <Link
             to="/profile"
             role="menuitem"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-accent"
             tabIndex={0}
           >
             <UserIcon className="h-4 w-4" />
@@ -92,7 +91,7 @@ export function UserMenu() {
             to="/api-keys"
             role="menuitem"
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-accent"
             tabIndex={0}
           >
             <KeyRound className="h-4 w-4" />
@@ -103,7 +102,7 @@ export function UserMenu() {
               to="/admin/users"
               role="menuitem"
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+              className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-accent"
               tabIndex={0}
             >
               <Shield className="h-4 w-4" />
@@ -114,7 +113,7 @@ export function UserMenu() {
             type="button"
             role="menuitem"
             onClick={handleLogout}
-            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40"
+            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-destructive hover:bg-destructive/10"
             tabIndex={0}
           >
             <LogOut className="h-4 w-4" />

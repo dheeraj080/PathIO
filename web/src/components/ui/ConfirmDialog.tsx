@@ -44,7 +44,7 @@ export function ConfirmDialog({
       }
     >
       {typeof description === 'string' ? (
-        <p className="text-sm text-slate-600 dark:text-slate-300">{description}</p>
+        <p className="text-sm text-muted-foreground">{description}</p>
       ) : (
         description
       )}

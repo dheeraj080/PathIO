@@ -103,7 +103,7 @@ export function ProviderButtons({
 
       <p aria-live="polite" className="min-h-[1.25rem] text-sm">
         {pending ? (
-          <span className="text-slate-500 dark:text-slate-400">
+          <span className="text-muted-foreground">
             Waiting for {PROVIDER_NAME[pending]} to finish. If no window appeared, allow popups for
             this site and try again.
           </span>
@@ -115,8 +115,8 @@ export function ProviderButtons({
           role="alert"
           className={
             errorIsNotice
-              ? 'text-sm text-slate-600 dark:text-slate-300'
-              : 'text-sm text-red-600 dark:text-red-400'
+              ? 'text-sm text-muted-foreground'
+              : 'text-sm text-destructive'
           }
         >
           {error}

@@ -1,20 +1,22 @@
-import { Link, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
-import { UrlAnalyticsPanel } from '@/features/analytics/UrlAnalyticsPanel'
+import { PageContainer } from '@/components/layout/PageContainer'
 import { Button } from '@/components/ui/Button'
+import { UrlAnalyticsPanel } from '@/features/analytics/UrlAnalyticsPanel'
 
 export function LinkDetail() {
   const { shortCode = '' } = useParams<{ shortCode: string }>()
+  const navigate = useNavigate()
 
   return (
-    <div className="space-y-6">
-      <Link to="/dashboard">
-        <Button variant="ghost" size="sm">
-          <ArrowLeft className="h-4 w-4" />
+    <PageContainer>
+      <div>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+          <ArrowLeft className="size-4" />
           Back to dashboard
         </Button>
-      </Link>
+      </div>
       <UrlAnalyticsPanel shortCode={shortCode} />
-    </div>
+    </PageContainer>
   )
 }

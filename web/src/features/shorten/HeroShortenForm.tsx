@@ -74,7 +74,7 @@ export function HeroShortenForm() {
     <div className="space-y-3">
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm sm:flex-row sm:items-center dark:border-slate-700 dark:bg-slate-800"
+        className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-2 shadow-soft sm:flex-row sm:items-center"
       >
         <div className="flex-1">
           <Input
@@ -84,7 +84,7 @@ export function HeroShortenForm() {
             value={longUrl}
             onChange={(event) => setLongUrl(event.target.value)}
             onBlur={() => setTouched(true)}
-            className="border-transparent shadow-none focus:ring-0 dark:border-transparent"
+            className="border-transparent"
           />
         </div>
         <Button type="submit" size="lg" loading={isPending} className="sm:w-auto">
@@ -95,9 +95,9 @@ export function HeroShortenForm() {
 
       <div id={statusId} aria-live="polite" className="min-h-[1.25rem] text-sm">
         {error ? (
-          <p className="text-red-600 dark:text-red-400">{error}</p>
+          <p className="text-destructive">{error}</p>
         ) : (
-          <p className="text-slate-500 dark:text-slate-400">
+          <p className="text-muted-foreground">
             {isAuthenticated
               ? 'Enter a destination URL and we will create the short link right away.'
               : 'Sign in with Google or GitHub to create the link — your URL is kept ready.'}
@@ -106,8 +106,8 @@ export function HeroShortenForm() {
       </div>
 
       {result ? (
-        <div className="animate-fade-in rounded-xl border border-brand-200 bg-brand-50/60 p-4 dark:border-brand-800 dark:bg-brand-950/40">
-          <div className="flex items-center gap-2 text-sm font-medium text-brand-700 dark:text-brand-300">
+        <div className="animate-fade-in rounded-xl border border-primary/20 bg-primary/5 p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-primary">
             <Sparkles className="h-4 w-4" />
             Your short link is ready
           </div>
@@ -116,7 +116,7 @@ export function HeroShortenForm() {
               href={result.shortUrl}
               target="_blank"
               rel="noreferrer"
-              className="truncate font-mono text-sm text-brand-700 underline-offset-2 hover:underline dark:text-brand-300"
+              className="truncate font-mono text-sm text-primary underline-offset-2 hover:underline"
             >
               {result.shortUrl}
             </a>

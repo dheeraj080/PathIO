@@ -1,5 +1,4 @@
 import { NavLink, Link } from 'react-router-dom'
-import { StatusBadge } from '@/components/StatusBadge'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Brand } from '@/components/Brand'
 import { Button } from '@/components/ui/Button'
@@ -9,17 +8,17 @@ import { cn } from '@/lib/cn'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+    'rounded-md px-3 py-2 text-sm font-medium transition-colors',
     isActive
-      ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200'
-      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
+      ? 'bg-accent text-accent-foreground'
+      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
   )
 
 export function Header() {
   const { isAuthenticated, isAdmin } = useAuth()
 
   return (
-    <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-700 dark:bg-slate-900/80">
+    <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-4">
         <div className="flex items-center gap-6">
           <Brand />
@@ -36,9 +35,7 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="hidden md:block">
-            <StatusBadge />
-          </div>
+          
           <ThemeToggle />
           {isAuthenticated ? (
             <UserMenu />

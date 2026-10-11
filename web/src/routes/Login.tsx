@@ -66,10 +66,10 @@ export function Login() {
 
       <div className="relative my-6">
         <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <span className="w-full border-t border-slate-200 dark:border-slate-800" />
+          <span className="w-full border-t border-border" />
         </div>
         <div className="relative flex justify-center">
-          <span className="bg-white px-3 text-xs font-medium uppercase tracking-wider text-slate-400 dark:bg-slate-900 dark:text-slate-500">
+          <span className="bg-card px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
             Administrator
           </span>
         </div>
@@ -77,16 +77,16 @@ export function Login() {
 
       <section
         aria-labelledby="admin-signin-heading"
-        className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/40"
+        className="rounded-xl border border-border bg-muted/40 p-4"
       >
         <h2
           id="admin-signin-heading"
-          className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-slate-200"
+          className="flex items-center gap-2 text-sm font-semibold text-foreground"
         >
           <KeyRound className="h-3.5 w-3.5 shrink-0" />
           Administrator sign-in
         </h2>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+        <p className="mt-1 text-xs text-muted-foreground">
           Reserved for the administrator account provisioned for this environment. Everyone else
           signs in with Google or GitHub above.
         </p>
@@ -113,7 +113,7 @@ export function Login() {
             onChange={(event) => setPassword(event.target.value)}
           />
           {error ? (
-            <p id={ADMIN_ERROR_ID} role="alert" className="text-sm text-red-600 dark:text-red-400">
+            <p id={ADMIN_ERROR_ID} role="alert" className="text-sm text-destructive">
               {error}
             </p>
           ) : null}
@@ -123,11 +123,11 @@ export function Login() {
         </form>
       </section>
 
-      <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+      <p className="mt-6 text-center text-sm text-muted-foreground">
         New to PathIO?{' '}
         <Link
           to={`/signup?redirect=${encodeURIComponent(redirect)}`}
-          className="font-medium text-brand-600 hover:underline dark:text-brand-400"
+          className="font-medium text-primary hover:underline"
         >
           Create an account
         </Link>
