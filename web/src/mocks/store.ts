@@ -157,25 +157,21 @@ function seedLink(
   const createdAt = daysAgoIso(40 - index, 9)
   const link: MockLink = { shortCode: code, longUrl, ownerId, clickCount, createdAt }
 
-  let produced = 0
-  let day = 0
-  while (produced < clickCount && day < 60) {
-    const roll = rng()
-    if (roll > 0.45) {
-      const referrer = REFERRERS[Math.floor(rng() * REFERRERS.length)]
-      const device = DEVICES[Math.floor(rng() * DEVICES.length)]
-      state.clicks.push({
-        shortCode: code,
-        at: daysAgoIso(day, Math.floor(rng() * 20) + 1),
-        referrer,
-        device,
-        visitor: `v-${Math.floor(rng() * Math.max(1, Math.floor(clickCount * 0.7)))}`,
-      })
-      produced += 1
-    }
-    day = (day + 1) % 30
+  // Exactly `clickCount` click events, each on a random day anywhere in the
+  // window, so the persisted counter always matches the seeded history.
+  const uniqueScale = Math.max(1, Math.floor(clickCount * 0.7))
+  for (let produced = 0; produced < clickCount; produced += 1) {
+    const day = Math.floor(rng() * SEED_WINDOW_DAYS)
+    const referrer = REFERRERS[Math.floor(rng() * REFERRERS.length)]
+    const device = DEVICES[Math.floor(rng() * DEVICES.length)]
+    state.clicks.push({
+      shortCode: code,
+      at: daysAgoIso(day, Math.floor(rng() * 20) + 1),
+      referrer,
+      device,
+      visitor: `v-${Math.floor(rng() * uniqueScale)}`,
+    })
   }
-  link.clickCount = produced
   return link
 }
 
@@ -308,6 +304,27 @@ export function listUsers(): MockUser[] {
 
 export function findLink(shortCode: string): MockLink | undefined {
   return state.links.find((link) => link.shortCode === shortCode)
+}
+
+/**
+ * Registers a live redirect hit: bumps the link's persisted counter and appends
+ * a click event so history/breakdown/unique views stay consistent with the
+ * count. A redirected demo click therefore shows up in analytics.
+ */
+export function recordClick(shortCode: string): MockLink {
+  const link = findLink(shortCode)
+  if (!link) {
+    throw new MockHttpError(404, 'Not Found', `URL not found for code: ${shortCode}`)
+  }
+  link.clickCount += 1
+  state.clicks.push({
+    shortCode,
+    at: todayIso(),
+    referrer: REFERRERS[Math.floor(Math.random() * REFERRERS.length)],
+    device: DEVICES[Math.floor(Math.random() * DEVICES.length)],
+    visitor: `v-live-${Date.now().toString(36)}`,
+  })
+  return link
 }
 
 // --- auth ------------------------------------------------------------------
@@ -504,6 +521,14 @@ function randomKeyToken(): string {
   }
   return out
 }
+
+/**
+ * Number of days back the demo history stretches. Clicks are spread uniformly
+ * across this window so the 7/30/90-day charts and the previous-period
+ * comparisons all carry data (the old generator wrapped its day counter at 30,
+ * so half the window never actually got used).
+ */
+const SEED_WINDOW_DAYS = 60
 
 /**
  * 64-char hex digest stand-in for the mock layer. Not cryptographic; it only
