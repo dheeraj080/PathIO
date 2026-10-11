@@ -13,12 +13,24 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @Slf4j
 public class RateLimiterService {
+
+    /**
+     * Result of one consume attempt, sized for the {@code X-RateLimit-*} response headers.
+     *
+     * @param allowed           whether the request consumed a token
+     * @param limit             bucket capacity (per refill window)
+     * @param remaining         tokens left after this attempt (may be an estimate for Redis buckets)
+     * @param resetEpochSeconds unix-epoch second when the bucket is expected to be full again
+     */
+    public record BucketConsumption(boolean allowed, int limit, long remaining, long resetEpochSeconds) {
+    }
 
     @Value("${spring.data.redis.host:localhost}")
     private String redisHost;
@@ -54,17 +66,25 @@ public class RateLimiterService {
     }
 
     /**
-     * Overloaded method for standard single-argument checks.
+     * Standard single-argument check used by callers that only need the allow/deny verdict.
      */
     public boolean isAllowed(String key) {
-        return isAllowed(key, BucketType.GENERAL);
+        return consume(key, BucketType.GENERAL).allowed();
+    }
+
+    public boolean isAllowed(String key, BucketType type) {
+        return consume(key, type).allowed();
     }
 
     /**
-     * Primary rate check method called by the interceptor, supporting tier types.
+     * Primary rate check: consumes one token and returns the state needed for
+     * {@code X-RateLimit-Limit/-Remaining/-Reset}.
      */
-    public boolean isAllowed(String key, BucketType type) {
+    public BucketConsumption consume(String key, BucketType type) {
         String storageKey = type.name() + ":" + key;
+        int limit = type.getCapacity();
+        long now = Instant.now().getEpochSecond();
+        long durationSeconds = type.getDuration().toSeconds();
 
         if (useRedis) {
             try {
@@ -72,7 +92,8 @@ public class RateLimiterService {
                 if (manager != null) {
                     BucketConfiguration configuration = buildConfiguration(type);
                     Bucket redisBucket = manager.builder().build(storageKey.getBytes(), configuration);
-                    return redisBucket.tryConsume(1);
+                    boolean allowed = redisBucket.tryConsume(1);
+                    return consumption(allowed, now, durationSeconds, limit, safeRemaining(redisBucket, limit));
                 }
             } catch (Exception e) {
                 log.warn("Redis rate limiter failed, falling back to local memory cache: {}", e.getMessage());
@@ -85,7 +106,32 @@ public class RateLimiterService {
                 k -> Bucket.builder()
                         .addLimit(Bandwidth.classic(type.getCapacity(), Refill.greedy(type.getCapacity(), type.getDuration())))
                         .build());
-        return localBucket.tryConsume(1);
+        boolean allowed = localBucket.tryConsume(1);
+        return consumption(allowed, now, durationSeconds, limit, safeRemaining(localBucket, limit));
+    }
+
+    private long safeRemaining(Bucket bucket, int fallbackLimit) {
+        try {
+            return bucket.getAvailableTokens();
+        } catch (Exception e) {
+            // Some Redis proxy strategies cannot answer the estimate; report full capacity.
+            return fallbackLimit;
+        }
+    }
+
+    /**
+     * Greedy refill refills {@code limit} tokens over {@code durationSeconds}, so a bucket with
+     * {@code remaining} tokens is full again in {@code (limit - remaining) * duration / limit}
+     * seconds. Empty buckets therefore reset in one full window.
+     */
+    private BucketConsumption consumption(boolean allowed, long now, long durationSeconds, int limit, long remaining) {
+        long safeRemaining = Math.max(0L, remaining);
+        long deficit = Math.max(0L, (long) limit - safeRemaining);
+        long offset = deficit == 0
+                ? durationSeconds
+                : (long) Math.ceil((double) deficit * durationSeconds / Math.max(1, limit));
+        long reset = now + Math.min(Math.max(offset, 1), durationSeconds);
+        return new BucketConsumption(allowed, limit, safeRemaining, reset);
     }
 
     private ProxyManager<byte[]> getProxyManager() {

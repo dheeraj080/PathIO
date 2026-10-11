@@ -3,6 +3,7 @@ package com.pt.pathio.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.pt.pathio.auth.dto.ApiError;
+import com.pt.pathio.auth.security.ApiKeyAuthenticationFilter;
 import com.pt.pathio.auth.security.CookieAuthOriginFilter;
 import com.pt.pathio.auth.security.CustomUserDetailService;
 import com.pt.pathio.auth.security.JwtAuthenticationFilter;
@@ -37,15 +38,18 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final ApiKeyAuthenticationFilter apiKeyAuthenticationFilter;
     private final AuthenticationSuccessHandler authenticationSuccessHandler;
     private final AuthenticationFailureHandler authenticationFailureHandler;
 
     public SecurityConfig(
             JwtAuthenticationFilter jwtAuthenticationFilter,
+            ApiKeyAuthenticationFilter apiKeyAuthenticationFilter,
             AuthenticationSuccessHandler authenticationSuccessHandler,
             AuthenticationFailureHandler authenticationFailureHandler
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.apiKeyAuthenticationFilter = apiKeyAuthenticationFilter;
         this.authenticationSuccessHandler = authenticationSuccessHandler;
         this.authenticationFailureHandler = authenticationFailureHandler;
     }
@@ -120,6 +124,8 @@ public class SecurityConfig {
                         })
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // API keys (X-API-Key) authenticate after the JWT filter so a Bearer token wins.
+                .addFilterAfter(apiKeyAuthenticationFilter, JwtAuthenticationFilter.class)
                 // CSRF defense-in-depth for the cookie-authenticated refresh/logout endpoints.
                 .addFilterAfter(cookieAuthOriginFilter, JwtAuthenticationFilter.class);
 

@@ -190,6 +190,8 @@ form (everyone else is `403 OAUTH_ONLY`).
   on logout.
 - All API calls are made with `credentials: 'include'` and a `Bearer` access token; a single-flight
   `401 → refresh → retry` cycle keeps sessions alive.
+- **Programmatic access:** requests can also authenticate with an `X-API-Key` header (see
+  *API keys* below). A Bearer token always wins; an invalid API key fails with `401`.
 - The web redirects anonymous users to `/login?redirect=<path>` and returns them after sign-in.
 
 ---
@@ -217,6 +219,22 @@ All endpoints return JSON (`ApiError` bodies on failure). Base path `/api`.
 | `GET` | `/urls/{shortCode}/breakdown?days=30` | owner | Referrer and device breakdowns |
 | `GET` | `/overview` | auth | Your total links + clicks |
 
+### API keys (`/api/v1/api-keys`)
+
+Programmatic access keys let scripts and CI call the API with an `X-API-Key` header instead of a
+Bearer token. The plaintext is returned **exactly once** at creation — the server stores only its
+SHA-256 digest, so a lost key must be regenerated (there is no recovery path, by design).
+
+| Method | Path | Access | Description |
+|---|---|---|---|
+| `GET` | `/api/v1/api-keys` | auth | List your keys (metadata only) |
+| `POST` | `/api/v1/api-keys` | auth | Create a key → `201` + `{ "key": "pio_…", "apiKey": {…} }` (plaintext shown once) |
+| `DELETE` | `/api/v1/api-keys/{id}` | owner | Soft-revoke a key → `204` |
+
+```bash
+curl -H "X-API-Key: pio_…" https://api.example.com/api/v1/urls/me
+```
+
 ### Admin (`/api/admin`) — `ROLE_ADMIN` only
 
 | Method | Path | Description |
@@ -233,8 +251,8 @@ OAuth login goes through Spring Security at `/oauth2/authorization/{google|githu
 ### Other
 
 - `GET /actuator/health` (public) and `GET /actuator/prometheus` (exposed).
-- Swagger UI at `/swagger-ui.html` (springdoc is wired; controllers are not yet annotated with
-  `@Operation`/`@Tag`).
+- Swagger UI at `/swagger-ui.html` (springdoc wired; the API-keys endpoints carry
+  `@Operation`/`@Tag` annotations).
 
 ---
 
@@ -265,8 +283,11 @@ OAuth login goes through Spring Security at `/oauth2/authorization/{google|githu
 - JWT access tokens (HMAC-SHA512, 1 h) + DB-backed rotating refresh tokens (30 d, HttpOnly cookie).
 - Method-level security (`@EnableMethodSecurity`) with **ownership checks** — you can only read/edit/
   delete your own links; anonymous callers get `401`, authenticated non-owners get `403`/`404`.
-- **Rate limiting** with Bucket4j: 60 req/min per IP on `/api/**`, Redis-backed with an in-memory
-  fallback.
+- **Rate limiting** with Bucket4j: 60 req/min per IP on `/api/**` (per API key when an `X-API-Key`
+  is used), Redis-backed with an in-memory fallback. Every response carries
+  `X-RateLimit-Limit` / `X-RateLimit-Remaining` / `X-RateLimit-Reset`; a `429` also gets `Retry-After`.
+- **API keys** are persisted as **SHA-256 digests only** — the plaintext is returned once at
+  creation and never stored or logged, so a database dump yields no usable credentials.
 - Passwords are BCrypt-hashed and **never** serialized in DTOs.
 - CORS configured with credentials; the OAuth popup only accepts `postMessage` from allow-listed
   origins.
@@ -363,10 +384,11 @@ Flyway migrations run automatically on startup (`ddl-auto=validate`):
 
 ## Roadmap
 
-Phase 1–4 (link CRUD + aliases, richer analytics, OAuth-only auth, observability fixes) are complete.
-Open items include API keys + rate-limit headers, geo analytics, link expiry / password-protected
-links, search/tags, self-service account deletion, custom domains, and webhooks. The working feature
-plan lives in `internal/plan.md` (git-ignored, local only).
+Phase 1–4 (link CRUD + aliases, richer analytics, OAuth-only auth, observability fixes) are complete,
+as is the "API & Developer Experience" item (user API keys, `X-RateLimit-*` headers, OpenAPI tags
+on the new endpoints). Open items include geo analytics, link expiry / password-protected links,
+search/tags, self-service account deletion, custom domains, and webhooks. The working feature plan
+lives in `internal/plan.md` (git-ignored, local only).
 
 ---
 
