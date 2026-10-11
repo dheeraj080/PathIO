@@ -119,8 +119,8 @@ class AuthPhase3SecurityTest {
         String shortCode = shortUrl.substring(shortUrl.lastIndexOf('/') + 1);
 
         UrlEntity entity = urlRepository.findByShortCode(shortCode).orElseThrow();
-        assertThat(entity.getUser()).isNotNull();
-        assertThat(entity.getUser().getId()).isEqualTo(oauthUser.getId());
+        assertThat(entity.getUserId()).isNotNull();
+        assertThat(entity.getUserId()).isEqualTo(oauthUser.getId());
     }
 
     @Test
@@ -162,7 +162,7 @@ class AuthPhase3SecurityTest {
                 .longUrl("https://example.com/public-target")
                 .shortCode("p3pub" + UUID.randomUUID().toString().replace("-", "").substring(0, 10))
                 .clickCount(0L)
-                .user(oauthUser)
+                .userId(oauthUser.getId())
                 .build());
 
         mockMvc.perform(get("/api/v1/" + entity.getShortCode()))

@@ -1,6 +1,5 @@
 package com.pt.pathio.entity;
 
-import com.pt.pathio.auth.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -38,9 +37,13 @@ public class UrlEntity implements Persistable<Long> {
     @Builder.Default
     private long clickCount = 0;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id")
-    private User user;
+    /**
+     * Owning user's id, or {@code null} for legacy anonymous links. Stored as a plain identifier
+     * (no JPA association) so the link module has no compile-time dependency on auth entities; the
+     * database-level foreign key into {@code users} was dropped in V10 for the same reason.
+     */
+    @Column(name = "user_id")
+    private UUID userId;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -59,22 +62,5 @@ public class UrlEntity implements Persistable<Long> {
     @PostLoad
     void markNotNew() {
         this.isNew = false;
-    }
-
-    /**
-     * The owning user's identifier, or {@code null} for legacy anonymous links. Exposes only the id
-     * so link code never has to reference the auth entity.
-     */
-    public UUID getOwnerId() {
-        return user == null ? null : user.getId();
-    }
-
-    /**
-     * Attaches the owner by identifier without leaking the auth entity to callers. The {@code user}
-     * association is still the JPA {@code @ManyToOne} (a later phase replaces it with a scalar
-     * {@code userId}); only the primary key is needed to write the foreign key on insert.
-     */
-    public void setOwnerId(UUID ownerId) {
-        this.user = ownerId == null ? null : User.builder().id(ownerId).build();
     }
 }

@@ -92,7 +92,7 @@ public class UrlShortenerService {
                     .shortCode(shortCode)
                     .clickCount(0L)
                     .build();
-            urlEntity.setOwnerId(ownerId);
+            urlEntity.setUserId(ownerId);
 
             try {
                 urlRepository.save(urlEntity);

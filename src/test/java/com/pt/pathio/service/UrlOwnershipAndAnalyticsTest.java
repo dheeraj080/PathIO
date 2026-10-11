@@ -106,8 +106,8 @@ class UrlOwnershipAndAnalyticsTest {
         String shortCode = response.shortUrl().substring(response.shortUrl().lastIndexOf('/') + 1);
         UrlEntity entity = urlRepository.findByShortCode(shortCode).orElseThrow();
 
-        assertThat(entity.getUser()).isNotNull();
-        assertThat(entity.getUser().getId()).isEqualTo(testUser1.getId());
+        assertThat(entity.getUserId()).isNotNull();
+        assertThat(entity.getUserId()).isEqualTo(testUser1.getId());
     }
 
     @Test
@@ -157,7 +157,7 @@ class UrlOwnershipAndAnalyticsTest {
                 .longUrl("https://example.com/anon-stats")
                 .shortCode("anonstats" + UUID.randomUUID().toString().replace("-", "").substring(0, 8))
                 .clickCount(0L)
-                .user(null)
+                .userId(null)
                 .build();
         urlRepository.save(anonEntity);
         String anonCode = anonEntity.getShortCode();

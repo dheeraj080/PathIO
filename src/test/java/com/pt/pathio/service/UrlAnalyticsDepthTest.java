@@ -206,7 +206,7 @@ class UrlAnalyticsDepthTest {
                 .longUrl("https://example.com/anon-depth")
                 .shortCode("anondepth" + UUID.randomUUID().toString().replace("-", "").substring(0, 8))
                 .clickCount(0L)
-                .user(null)
+                .userId(null)
                 .build();
         urlRepository.save(anonEntity);
         String anonCode = anonEntity.getShortCode();

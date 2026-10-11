@@ -27,6 +27,6 @@ public interface UrlRepository extends JpaRepository<UrlEntity, Long> {
 
     long countByUserId(UUID userId);
 
-    @Query("SELECT COALESCE(SUM(u.clickCount), 0) FROM UrlEntity u WHERE u.user.id = :userId")
+    @Query("SELECT COALESCE(SUM(u.clickCount), 0) FROM UrlEntity u WHERE u.userId = :userId")
     long sumClicksByUserId(@Param("userId") UUID userId);
 }

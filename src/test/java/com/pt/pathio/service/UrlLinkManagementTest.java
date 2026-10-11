@@ -100,7 +100,7 @@ class UrlLinkManagementTest {
         assertThat(response.shortUrl()).endsWith("/" + alias);
         UrlEntity entity = urlRepository.findByShortCode(alias).orElseThrow();
         assertThat(entity.getLongUrl()).isEqualTo("https://example.com/custom-alias-target");
-        assertThat(entity.getUser().getId()).isEqualTo(testUser1.getId());
+        assertThat(entity.getUserId()).isEqualTo(testUser1.getId());
 
         assertThat(urlShortenerService.getOriginalUrl(alias)).isEqualTo("https://example.com/custom-alias-target");
     }
