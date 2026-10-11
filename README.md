@@ -328,6 +328,7 @@ mock/demo instructions, and project structure.
 | `/dashboard` | Shorten form, account overview, links table | auth |
 | `/links/:shortCode` | Per-link analytics (history chart, referrers, devices) | auth |
 | `/profile` | Edit display name | auth |
+| `/api-keys` | Create/list/revoke programmatic API keys (plaintext shown once) | auth |
 | `/admin/users`, `/admin/links` | Admin console | admin |
 | `*` | 404 | public |
 
@@ -339,15 +340,16 @@ full contract with real cookies and a working OAuth popup.
 
 ## Testing
 
-**Backend** (`./mvnw test`, 19 classes): ownership & analytics, link management (aliases, update,
+**Backend** (`./mvnw test`, 21 classes): ownership & analytics, link management (aliases, update,
 delete for owner/non-owner), analytics depth (HLL, rollups, breakdowns) plus alias-reuse binding,
 method security, OAuth popup, refresh-family rotation, JWT/cookie services, analytics flush, ID
-generation/Feistel units, redirect cache fallback, and the auth policy (anonymous shorten → `401`,
-non-admin login → `403 OAUTH_ONLY`, admin login → `200`, missing endpoint → `404`).
+generation/Feistel units, redirect cache fallback, API-key lifecycle & authentication, and the auth
+policy (anonymous shorten → `401`, non-admin login → `403 OAUTH_ONLY`, admin login → `200`, missing
+endpoint → `404`).
 
-**web** (`cd web && npm test`, 34 tests): OAuth popup helper, API client refresh/retry and session
+**web** (`cd web && npm test`, 38 tests): OAuth popup helper, API client refresh/retry and session
 teardown on silent-refresh failure, shorten forms, links table pagination, analytics panel, admin
-user management, auth flows.
+user management, API-key management (create/plaintext-once/revoke), auth flows.
 
 ---
 
