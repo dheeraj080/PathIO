@@ -1,5 +1,7 @@
 package com.pt.pathio.architecture;
 
+import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
@@ -7,6 +9,8 @@ import com.tngtech.archunit.lang.ArchRule;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import static com.tngtech.archunit.base.DescribedPredicate.not;
+import static com.tngtech.archunit.core.domain.JavaClass.Predicates.resideInAPackage;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,47 +20,42 @@ import static org.assertj.core.api.Assertions.assertThat;
  * {@code internal/modular-monolith-plan.md}.
  *
  * <p>The four modules are {@code shared}, {@code auth}, {@code link} and
- * {@code analytics}. Allowed application dependencies are:
- * {@code auth -> shared}, {@code link -> {shared, auth.api}} and
- * {@code analytics -> {shared, auth.api, link.api}}. A consuming module may touch
- * only another module's published {@code *.api} package, never its implementation
- * packages.</p>
+ * {@code analytics}. The allowed application dependency graph is:</p>
+ * <pre>
+ *   shared    -&gt; (no application module)
+ *   auth      -&gt; shared
+ *   link      -&gt; shared, auth.api
+ *   analytics -&gt; shared, auth.api, link.api
+ * </pre>
  *
- * <p><b>Staging note.</b> Rules were introduced incrementally, each becoming active only once the
- * relevant module package existed; a staged rule carried an {@code allowEmptyShould(true)} until
- * then. As of the Phase 7 package organization all four modules ({@code shared}, {@code auth},
- * {@code link}, {@code analytics}) exist and no {@code allowEmptyShould} remains, so every rule
- * below is enforced against real classes. Rules are never weakened in their assertions.</p>
+ * <p>A module may be consumed only through another module's published {@code *.api}
+ * package; implementation packages ({@code controller}, {@code app}, {@code domain},
+ * {@code persistence}, {@code security}, {@code config}, {@code internal}, {@code dto},
+ * {@code validation}, {@code listener}) are private to their owner. These rules are
+ * enforced against real bytecode (never weakened, no {@code allowEmptyShould}); the
+ * {@link #importsAreNotSilentlyEmpty()} guard ensures the import itself stays honest.</p>
  */
 class ModularMonolithArchitectureTest {
 
     private static final String SHARED = "com.pt.pathio.shared..";
     private static final String AUTH = "com.pt.pathio.auth..";
+    private static final String AUTH_API = "com.pt.pathio.auth.api..";
     private static final String LINK = "com.pt.pathio.link..";
+    private static final String LINK_API = "com.pt.pathio.link.api..";
     private static final String ANALYTICS = "com.pt.pathio.analytics..";
 
-    /** Non-API authentication packages a consuming module must never reach into. */
-    private static final String[] AUTH_IMPLEMENTATION = {
-            "com.pt.pathio.auth.controller..",
-            "com.pt.pathio.auth.app..",
-            "com.pt.pathio.auth.domain..",
-            "com.pt.pathio.auth.persistence..",
-            "com.pt.pathio.auth.security..",
-            "com.pt.pathio.auth.config..",
-            "com.pt.pathio.auth.internal..",
-            "com.pt.pathio.auth.dto.."
-    };
+    /**
+     * Every auth package that is <em>not</em> part of the published {@code auth.api}
+     * contract. Derived from the package tree rather than enumerated so a class added
+     * directly to {@code com.pt.pathio.auth} (or to a future subpackage) cannot slip
+     * past the boundary unnoticed.
+     */
+    private static final DescribedPredicate<JavaClass> AUTH_IMPLEMENTATION =
+            resideInAPackage(AUTH).and(not(resideInAPackage(AUTH_API)));
 
-    /** Non-API link packages a consuming module must never reach into. */
-    private static final String[] LINK_IMPLEMENTATION = {
-            "com.pt.pathio.link.controller..",
-            "com.pt.pathio.link.app..",
-            "com.pt.pathio.link.domain..",
-            "com.pt.pathio.link.persistence..",
-            "com.pt.pathio.link.validation..",
-            "com.pt.pathio.link.internal..",
-            "com.pt.pathio.link.dto.."
-    };
+    /** Every link package that is <em>not</em> part of the published {@code link.api} contract. */
+    private static final DescribedPredicate<JavaClass> LINK_IMPLEMENTATION =
+            resideInAPackage(LINK).and(not(resideInAPackage(LINK_API)));
 
     private static JavaClasses classes;
 
@@ -99,22 +98,38 @@ class ModularMonolithArchitectureTest {
     }
 
     @Test
-    void linkUsesOnlyTheAuthApi() {
+    void authImplementationIsNotReachedFromOutsideAuth() {
+        // link, analytics and shared may use auth.api, but never auth's implementation packages.
         ArchRule rule = noClasses()
-                .that().resideInAPackage(LINK)
-                .should().dependOnClassesThat().resideInAnyPackage(AUTH_IMPLEMENTATION);
+                .that().resideOutsideOfPackage(AUTH)
+                .should().dependOnClassesThat(AUTH_IMPLEMENTATION);
         rule.check(classes);
     }
 
     @Test
-    void analyticsUsesOnlyPublishedApis() {
-        // analytics may read another module's published contract (auth.api for the authenticated
-        // principal, link.api for link resolution) but must never reach into an implementation
-        // package. Mirrors linkUsesOnlyTheAuthApi; no auth/link implementation import is allowed.
+    void linkImplementationIsNotReachedFromOutsideLink() {
+        // analytics (and every other module) may use link.api, but never link's implementation.
         ArchRule rule = noClasses()
-                .that().resideInAPackage(ANALYTICS)
-                .should().dependOnClassesThat()
-                .resideInAnyPackage(concat(AUTH_IMPLEMENTATION, LINK_IMPLEMENTATION));
+                .that().resideOutsideOfPackage(LINK)
+                .should().dependOnClassesThat(LINK_IMPLEMENTATION);
+        rule.check(classes);
+    }
+
+    @Test
+    void authApiDoesNotDependOnAuthImplementation() {
+        // The published contract must stay a leaf: no auth implementation type may leak into it.
+        ArchRule rule = noClasses()
+                .that().resideInAPackage(AUTH_API)
+                .should().dependOnClassesThat(AUTH_IMPLEMENTATION);
+        rule.check(classes);
+    }
+
+    @Test
+    void linkApiDoesNotDependOnLinkImplementation() {
+        // The published contract must stay a leaf: no link implementation type may leak into it.
+        ArchRule rule = noClasses()
+                .that().resideInAPackage(LINK_API)
+                .should().dependOnClassesThat(LINK_IMPLEMENTATION);
         rule.check(classes);
     }
 
@@ -125,12 +140,5 @@ class ModularMonolithArchitectureTest {
                 .namingSlices("Module $1")
                 .should().beFreeOfCycles();
         rule.check(classes);
-    }
-
-    private static String[] concat(String[] a, String[] b) {
-        String[] combined = new String[a.length + b.length];
-        System.arraycopy(a, 0, combined, 0, a.length);
-        System.arraycopy(b, 0, combined, a.length, b.length);
-        return combined;
     }
 }
