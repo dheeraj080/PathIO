@@ -5,9 +5,11 @@ import com.pt.pathio.link.api.LinkLookup;
 import com.pt.pathio.link.api.LinkRef;
 import com.pt.pathio.link.persistence.UrlRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -45,6 +47,14 @@ public class LinkLookupImpl implements LinkLookup {
     @Transactional(readOnly = true)
     public long sumClicksByOwner(UUID ownerId) {
         return urlRepository.sumClicksByUserId(ownerId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LinkRef> findTopByOwner(UUID ownerId, int limit) {
+        return urlRepository.findByUserIdOrderByClickCountDesc(ownerId, PageRequest.of(0, limit)).stream()
+                .map(this::toRef)
+                .toList();
     }
 
     private LinkRef toRef(UrlEntity entity) {

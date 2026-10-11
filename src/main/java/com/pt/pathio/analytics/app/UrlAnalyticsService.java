@@ -3,6 +3,7 @@ package com.pt.pathio.analytics.app;
 import com.pt.pathio.analytics.dto.AnalyticsOverviewResponse;
 import com.pt.pathio.analytics.dto.ClickBreakdownResponse;
 import com.pt.pathio.analytics.dto.ClickHistoryPoint;
+import com.pt.pathio.analytics.dto.TopLinkResponse;
 import com.pt.pathio.analytics.dto.UrlAnalyticsResponse;
 import com.pt.pathio.analytics.domain.ClickBreakdownEntity;
 import com.pt.pathio.analytics.domain.ClickRollupEntity;
@@ -41,6 +42,7 @@ public class UrlAnalyticsService {
     private static final String PENDING_HASH = "url:pending_clicks";
     private static final String UNIQUE_PREFIX = "url:unique:";
     private static final int MAX_HISTORY_DAYS = 365;
+    private static final int MAX_TOP_LINKS = 20;
 
     public UrlAnalyticsResponse getUrlAnalytics(String shortCode, UUID userId) {
         LinkRef link = requireOwnedUrl(shortCode, userId);
@@ -107,6 +109,58 @@ public class UrlAnalyticsService {
         return new AnalyticsOverviewResponse(totalUrls, totalClicks);
     }
 
+    /**
+     * All-links click timeline: the owner's daily rollup rows are aggregated per date across
+     * every one of their URLs, then zero-filled for the requested window (same behaviour as the
+     * per-link {@link #getClickHistory}). Only persisted rollups are included, matching overview.
+     */
+    public List<ClickHistoryPoint> getGlobalHistory(UUID userId, int days) {
+        int window = normalizeDays(days);
+        LocalDate today = LocalDate.now(java.time.ZoneOffset.UTC);
+        LocalDate from = today.minusDays(window - 1L);
+
+        Map<LocalDate, Long> countsByDate = new HashMap<>();
+        for (Object[] row : clickRollupRepository.findHistoryByOwner(userId, from)) {
+            countsByDate.merge(toLocalDate(row[0]), ((Number) row[1]).longValue(), Long::sum);
+        }
+
+        List<ClickHistoryPoint> series = new ArrayList<>(window);
+        for (LocalDate date = from; !date.isAfter(today); date = date.plusDays(1)) {
+            series.add(new ClickHistoryPoint(date, countsByDate.getOrDefault(date, 0L)));
+        }
+        return series;
+    }
+
+    /** All-links referrer and device breakdown across the owner's URLs, for the requested window. */
+    public ClickBreakdownResponse getGlobalBreakdown(UUID userId, int days) {
+        int window = normalizeDays(days);
+        LocalDate from = LocalDate.now(java.time.ZoneOffset.UTC).minusDays(window - 1L);
+
+        return new ClickBreakdownResponse(
+                toAggregatedDimensionCounts(clickBreakdownRepository.findBreakdownByOwner(
+                        userId, UrlAnalyticsListener.DIMENSION_REFERRER, from)),
+                toAggregatedDimensionCounts(clickBreakdownRepository.findBreakdownByOwner(
+                        userId, UrlAnalyticsListener.DIMENSION_DEVICE, from))
+        );
+    }
+
+    /**
+     * The owner's most-clicked links, newest-first ordering aside. Ranking uses the persisted
+     * click count (the same source {@link #getOverview} totalClicks is built from), so a fresh
+     * click appears once its daily flush lands.
+     */
+    public List<TopLinkResponse> getTopLinks(UUID userId, int limit) {
+        int safeLimit = Math.max(1, Math.min(limit, MAX_TOP_LINKS));
+        String baseUrl = domain.endsWith("/") ? domain : domain + "/";
+        return linkLookup.findTopByOwner(userId, safeLimit).stream()
+                .map(ref -> new TopLinkResponse(
+                        ref.shortCode(),
+                        baseUrl + ref.shortCode(),
+                        ref.longUrl(),
+                        ref.clickCount()))
+                .toList();
+    }
+
     private LinkRef requireOwnedUrl(String shortCode, UUID userId) {
         LinkRef link = linkLookup.findByShortCode(shortCode)
                 .orElseThrow(() -> new ResourceNotFoundException("URL not found for short code: " + shortCode));
@@ -133,10 +187,33 @@ public class UrlAnalyticsService {
         for (ClickBreakdownEntity row : rows) {
             aggregated.merge(row.getId().getDimensionValue(), row.getClicks(), Long::sum);
         }
+        return toSortedDimensionCounts(aggregated);
+    }
+
+    /** Aggregates native query rows ({@code [dimensionValue, clicks]}) into sorted dimension counts. */
+    private List<ClickBreakdownResponse.DimensionCount> toAggregatedDimensionCounts(List<Object[]> rows) {
+        Map<String, Long> aggregated = new HashMap<>();
+        for (Object[] row : rows) {
+            aggregated.merge(row[0].toString(), ((Number) row[1]).longValue(), Long::sum);
+        }
+        return toSortedDimensionCounts(aggregated);
+    }
+
+    private List<ClickBreakdownResponse.DimensionCount> toSortedDimensionCounts(Map<String, Long> aggregated) {
         return aggregated.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
                 .map(e -> new ClickBreakdownResponse.DimensionCount(e.getKey(), e.getValue()))
                 .toList();
+    }
+
+    private static LocalDate toLocalDate(Object value) {
+        if (value instanceof LocalDate date) {
+            return date;
+        }
+        if (value instanceof java.sql.Date date) {
+            return date.toLocalDate();
+        }
+        throw new IllegalArgumentException("Unexpected click date type: " + value.getClass());
     }
 
     private int normalizeDays(int days) {

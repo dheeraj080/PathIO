@@ -4,6 +4,7 @@ import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.analytics.dto.AnalyticsOverviewResponse;
 import com.pt.pathio.analytics.dto.ClickBreakdownResponse;
 import com.pt.pathio.analytics.dto.ClickHistoryPoint;
+import com.pt.pathio.analytics.dto.TopLinkResponse;
 import com.pt.pathio.analytics.dto.UrlAnalyticsResponse;
 import com.pt.pathio.analytics.app.UrlAnalyticsService;
 import lombok.RequiredArgsConstructor;
@@ -60,6 +61,33 @@ public class UrlAnalyticsController {
     ) {
         requirePrincipal(principal);
         return ResponseEntity.ok(analyticsService.getOverview(principal.id()));
+    }
+
+    @GetMapping("/history")
+    public ResponseEntity<List<ClickHistoryPoint>> getGlobalHistory(
+            @RequestParam(defaultValue = "30") int days,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        requirePrincipal(principal);
+        return ResponseEntity.ok(analyticsService.getGlobalHistory(principal.id(), days));
+    }
+
+    @GetMapping("/breakdown")
+    public ResponseEntity<ClickBreakdownResponse> getGlobalBreakdown(
+            @RequestParam(defaultValue = "30") int days,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        requirePrincipal(principal);
+        return ResponseEntity.ok(analyticsService.getGlobalBreakdown(principal.id(), days));
+    }
+
+    @GetMapping("/top-links")
+    public ResponseEntity<List<TopLinkResponse>> getTopLinks(
+            @RequestParam(defaultValue = "5") int limit,
+            @AuthenticationPrincipal UserPrincipal principal
+    ) {
+        requirePrincipal(principal);
+        return ResponseEntity.ok(analyticsService.getTopLinks(principal.id(), limit));
     }
 
     private void requirePrincipal(UserPrincipal principal) {

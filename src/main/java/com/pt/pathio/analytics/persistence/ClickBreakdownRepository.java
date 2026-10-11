@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 public interface ClickBreakdownRepository extends JpaRepository<ClickBreakdownEntity, ClickBreakdownId> {
 
@@ -39,4 +40,22 @@ public interface ClickBreakdownRepository extends JpaRepository<ClickBreakdownEn
     List<ClickBreakdownEntity> findBreakdown(@Param("urlId") Long urlId,
                                              @Param("dimension") String dimension,
                                              @Param("from") LocalDate from);
+
+    /**
+     * Breakdown totals (referrers/devices) across every URL owned by {@code ownerId}, so the
+     * analytics module can build all-links referrer and device totals without reaching into the
+     * link module's persistence. Rows are scoped through {@code urls.user_id}.
+     */
+    @Query(value = """
+            SELECT c.dimension_value AS dimensionValue, SUM(c.clicks) AS clicks
+            FROM click_breakdown c
+            WHERE c.url_id IN (SELECT u.id FROM urls u WHERE u.user_id = :ownerId)
+              AND c.dimension = :dimension
+              AND c.click_date >= :from
+            GROUP BY c.dimension_value
+            ORDER BY SUM(c.clicks) DESC
+            """, nativeQuery = true)
+    List<Object[]> findBreakdownByOwner(@Param("ownerId") UUID ownerId,
+                                        @Param("dimension") String dimension,
+                                        @Param("from") LocalDate from);
 }

@@ -1,5 +1,6 @@
 package com.pt.pathio.link.api;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,4 +28,10 @@ public interface LinkLookup {
 
     /** Sum of persisted click counts across the URLs owned by {@code ownerId}. */
     long sumClicksByOwner(UUID ownerId);
+
+    /**
+     * The {@code limit} most-clicked URLs owned by {@code ownerId}, ordered by persisted click
+     * count descending. Used by analytics' all-links "top links" view.
+     */
+    List<LinkRef> findTopByOwner(UUID ownerId, int limit);
 }

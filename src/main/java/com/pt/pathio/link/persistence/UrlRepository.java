@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,6 +23,8 @@ public interface UrlRepository extends JpaRepository<UrlEntity, Long> {
                                 @Param("clicks") long clicks);
 
     Page<UrlEntity> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
+
+    List<UrlEntity> findByUserIdOrderByClickCountDesc(UUID userId, Pageable pageable);
 
     Optional<UrlEntity> findByShortCodeAndUserId(String shortCode, UUID userId);
 
