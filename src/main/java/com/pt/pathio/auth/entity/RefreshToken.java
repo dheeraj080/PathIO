@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "refresh_token", indexes = {
@@ -36,6 +37,14 @@ public class RefreshToken {
 
     @Column(name = "replaced_by_token", length = 64)
     private String replacedByToken;
+
+    /**
+     * Groups every token produced by successive rotations of one login session. A single family id
+     * lets a replayed superseded token revoke the whole chain atomically (SEC-05). Populated by
+     * {@code V6__refresh_token_family.sql} for existing rows.
+     */
+    @Column(name = "family_id", nullable = false, updatable = false)
+    private UUID familyId;
 
     @Column(name = "revoked_at")
     private Instant revokedAt;

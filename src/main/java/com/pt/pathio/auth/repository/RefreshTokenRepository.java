@@ -21,6 +21,34 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Stri
     @Query("DELETE FROM RefreshToken rt WHERE rt.expiresAt < :cutoff")
     void deleteExpiredBefore(@Param("cutoff") Instant cutoff);
 
+    /**
+     * Atomically consumes a refresh token during rotation: only the request that flips the row
+     * from {@code revoked=false} to {@code revoked=true} wins. Returns the number of rows updated
+     * (1 on success, 0 when a concurrent request already consumed the same token).
+     */
+    @Modifying
+    @Query("""
+            UPDATE RefreshToken rt
+               SET rt.revoked = true,
+                   rt.replacedByToken = :newJti,
+                   rt.revokedAt = :now
+             WHERE rt.jti = :jti
+               AND rt.revoked = false
+            """)
+    int rotate(@Param("jti") String jti, @Param("newJti") String newJti, @Param("now") Instant now);
+
+    /**
+     * Revokes every non-revoked token that shares the given family (replay escalation).
+     */
+    @Modifying
+    @Query("""
+            UPDATE RefreshToken rt
+               SET rt.revoked = true, rt.revokedAt = :now
+             WHERE rt.familyId = :familyId
+               AND rt.revoked = false
+            """)
+    int revokeFamily(@Param("familyId") UUID familyId, @Param("now") Instant now);
+
     @Modifying
     @Query("""
             UPDATE RefreshToken rt

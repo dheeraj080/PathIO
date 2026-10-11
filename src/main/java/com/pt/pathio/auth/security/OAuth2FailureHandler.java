@@ -41,27 +41,11 @@ public class OAuth2FailureHandler implements AuthenticationFailureHandler {
     ) throws IOException, ServletException {
         log.error("OAuth2 authentication failure: {}", exception.getMessage());
 
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("text/html");
-
         Map<String, Object> messagePayload = Map.of(
                 "type", "OAUTH_AUTH_FAILURE",
                 "error", "Authentication failed"
         );
-        String payloadJson = objectMapper.writeValueAsString(messagePayload);
-        String originsJson = objectMapper.writeValueAsString(authorizedOrigins);
-
-        String html = "<!DOCTYPE html><html><body><script>"
-                + "const allowedOrigins = " + originsJson + ";"
-                + "const message = " + payloadJson + ";"
-                + "if (window.opener) {"
-                + "  allowedOrigins.forEach(origin => {"
-                + "    try { window.opener.postMessage(message, origin); } catch (e) {}"
-                + "  });"
-                + "}"
-                + "window.close();"
-                + "</script></body></html>";
-
-        response.getWriter().write(html);
+        OAuthPopupResponse.write(response, objectMapper, authorizedOrigins, messagePayload,
+                HttpServletResponse.SC_UNAUTHORIZED);
     }
 }

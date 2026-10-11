@@ -3,8 +3,10 @@ package com.pt.pathio.config;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.pt.pathio.auth.dto.ApiError;
+import com.pt.pathio.auth.security.CookieAuthOriginFilter;
 import com.pt.pathio.auth.security.CustomUserDetailService;
 import com.pt.pathio.auth.security.JwtAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -26,6 +28,9 @@ import org.springframework.security.web.authentication.AuthenticationFailureHand
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+import java.util.Arrays;
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -46,7 +51,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, CookieAuthOriginFilter cookieAuthOriginFilter) throws Exception {
         ObjectMapper objectMapper = new ObjectMapper()
                 .findAndRegisterModules()
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -114,7 +119,9 @@ public class SecurityConfig {
                             }
                         })
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // CSRF defense-in-depth for the cookie-authenticated refresh/logout endpoints.
+                .addFilterAfter(cookieAuthOriginFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
@@ -122,6 +129,21 @@ public class SecurityConfig {
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * Blocks cross-origin requests to the cookie-authenticated refresh/logout endpoints unless the
+     * Origin (or Referer) is same-origin or on the OAuth/CORS allow-list.
+     */
+    @Bean
+    public CookieAuthOriginFilter cookieAuthOriginFilter(
+            @Value("${app.oauth2.authorized-origins:${app.cors.allowed-origins:http://localhost:3000,http://localhost:3001}}") String allowedOriginsStr
+    ) {
+        List<String> allowedOrigins = Arrays.stream(allowedOriginsStr.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .toList();
+        return new CookieAuthOriginFilter(allowedOrigins);
     }
 
     @Bean

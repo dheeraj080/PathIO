@@ -102,8 +102,8 @@ class UserSecurityAndDtoTest {
     }
 
     @Test
-    @DisplayName("TokenResponse serialization strictly excludes password from embedded UserDTO")
-    void testTokenResponseExcludesPassword() throws Exception {
+    @DisplayName("TokenResponse serialization strictly excludes password and refreshToken")
+    void testTokenResponseExcludesPasswordAndRefreshToken() throws Exception {
         UserDTO userDto = UserDTO.builder()
                 .id(UUID.randomUUID())
                 .name("Charlie")
@@ -115,7 +115,6 @@ class UserSecurityAndDtoTest {
 
         TokenResponse tokenResponse = TokenResponse.of(
                 "dummy-access",
-                "dummy-refresh",
                 3600,
                 userDto
         );
@@ -123,6 +122,8 @@ class UserSecurityAndDtoTest {
         String json = objectMapper.writeValueAsString(tokenResponse);
         JsonNode rootNode = objectMapper.readTree(json);
         assertThat(rootNode.get("user").has("password")).isFalse();
+        // SEC-02: the refresh token must never leave the server in a JSON body.
+        assertThat(rootNode.has("refreshToken")).isFalse();
     }
 
     @Test
