@@ -64,6 +64,7 @@ carried.
 | `/login` | `Login` — Google/GitHub + admin email/password | public |
 | `/signup` | `Signup` — Google/GitHub account creation | public |
 | `/dashboard` | `Dashboard` — shorten form, overview, links table | auth |
+| `/analytics` | `Analytics` — all-links timeline, referrers/devices, top links | auth |
 | `/links/:shortCode` | `LinkDetail` — per-link analytics | auth |
 | `/profile` | `Profile` — edit display name | auth |
 | `/api-keys` | `ApiKeys` — create/list/revoke programmatic keys (plaintext shown once) | auth |

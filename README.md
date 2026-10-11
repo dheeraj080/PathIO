@@ -221,6 +221,9 @@ All endpoints return JSON (`ApiError` bodies on failure). Base path `/api`.
 | `GET` | `/urls/{shortCode}/history?days=30` | owner | Zero-filled daily click series (max 365) |
 | `GET` | `/urls/{shortCode}/breakdown?days=30` | owner | Referrer and device breakdowns |
 | `GET` | `/overview` | auth | Your total links + clicks |
+| `GET` | `/history?days=30` | auth | All-links daily click series, rolled up across your URLs (zero-filled, max 365) |
+| `GET` | `/breakdown?days=30` | auth | All-links referrer and device breakdowns |
+| `GET` | `/top-links?limit=5` | auth | Your most-clicked links, ranked by persisted click count |
 
 ### API keys (`/api/v1/api-keys`)
 
@@ -377,6 +380,7 @@ mock/demo instructions, and project structure.
 | `/login` | Google/GitHub + admin email/password | public |
 | `/signup` | Google/GitHub account creation (OAuth-only) | public |
 | `/dashboard` | Shorten form, account overview, links table | auth |
+| `/analytics` | All-links analytics (timeline, referrers/devices, top links) | auth |
 | `/links/:shortCode` | Per-link analytics (history chart, referrers, devices) | auth |
 | `/profile` | Edit display name | auth |
 | `/api-keys` | Create/list/revoke programmatic API keys (plaintext shown once) | auth |
@@ -391,15 +395,17 @@ full contract with real cookies and a working OAuth popup.
 
 ## Testing
 
-**Backend** (`./mvnw test`, 127 tests): ownership & analytics, link management (aliases, update,
-delete for owner/non-owner), analytics depth (HLL, rollups, breakdowns) plus alias-reuse binding,
+**Backend** (`./mvnw test`, 130 tests): ownership & analytics, link management (aliases, update,
+delete for owner/non-owner), analytics depth (HLL, rollups, breakdowns, global aggregation) plus
+alias-reuse binding,
 method security, OAuth popup, refresh-family rotation, JWT/cookie services, analytics flush, ID
 generation/Feistel units, redirect cache fallback, API-key lifecycle & authentication, and the auth
 policy (anonymous shorten → `401`, non-admin login → `403 OAUTH_ONLY`, admin login → `200`, missing
 endpoint → `404`).
 
-**web** (`cd web && npm test`, 38 tests): OAuth popup helper, API client refresh/retry and session
-teardown on silent-refresh failure, shorten forms, links table pagination, analytics panel, admin
+**web** (`cd web && npm test`, 45 tests): OAuth popup helper, API client refresh/retry and session
+teardown on silent-refresh failure, shorten forms, links table pagination, global + per-link
+analytics panels, admin
 user management, API-key management (create/plaintext-once/revoke), auth flows.
 
 ---
