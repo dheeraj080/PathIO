@@ -10,7 +10,7 @@ for users and a dedicated admin console.
 │  Landing · Login · Signup │ ─────► │  Security → Controllers → Services          │
 │  Dashboard · Admin · …    │  JSON  │       │                  │                  │
 └───────────────────────────┘        │  PostgreSQL 16     Redis 7                 │
-   Google/GitHub OAuth popup          │  (Flyway V1–V8)    (cache · HLL · buffers) │
+   Google/GitHub OAuth popup          │  (Flyway V1–V9)    (cache · HLL · buffers) │
         └── postMessage ─────────────►└─────────────────────────────────────────────┘
 ```
 
@@ -26,7 +26,7 @@ for users and a dedicated admin console.
 | Layer | Technology |
 |---|---|
 | Backend | Java 27, Spring Boot 4.1.1, Spring Security + OAuth2 client, Spring Data JPA, WebMVC |
-| Data | PostgreSQL 16, Redis 7, Flyway (V1–V8) |
+| Data | PostgreSQL 16, Redis 7, Flyway (V1–V9) |
 | web | React 18, Vite 5, TypeScript, Tailwind CSS, TanStack Query, React Router 6, Recharts |
 | Security | JWT (HMAC-SHA512), BCrypt, Bucket4j rate limiting, SSRF/URL safety checks |
 | Observability | Micrometer + Prometheus, OpenTelemetry/OTLP tracing, Actuator |
@@ -55,7 +55,7 @@ pathio/
 │   │   ├── entity/ repository/  dto/  listener/  event/  metrics/  filter/
 │   └── resources/
 │       ├── application.properties
-│       └── db/migration/    # Flyway V1–V8
+│       └── db/migration/    # Flyway V1–V9
 ├── src/test/                # Backend tests
 ├── web/                # React SPA  (see web/README.md)
 └── internal/                # Local working docs (git-ignored)
@@ -344,6 +344,7 @@ Flyway migrations run automatically on startup (`ddl-auto=validate`):
 | `V6` | `refresh_token_family` — token families for rotation & reuse-revocation |
 | `V7` | analytics bound to immutable `urls.id` (FK `ON DELETE CASCADE`) |
 | `V8` | `id_generator` ceiling aligned to the 40-bit ID space (`chk_40bit_limit`) |
+| `V9` | `api_keys` — user API keys (only SHA-256 `key_hash` is stored) |
 
 ---
 
