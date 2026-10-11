@@ -1,10 +1,12 @@
 package com.pt.pathio.listener;
 
 import com.pt.pathio.event.UrlClickedEvent;
+import com.pt.pathio.link.api.LinkLookup;
+import com.pt.pathio.link.api.LinkRef;
+import com.pt.pathio.link.api.UrlDeletedEvent;
 import com.pt.pathio.shared.metrics.PathioMetrics;
 import com.pt.pathio.repository.ClickBreakdownRepository;
 import com.pt.pathio.repository.ClickRollupRepository;
-import com.pt.pathio.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -31,13 +33,14 @@ import java.util.regex.Pattern;
 public class UrlAnalyticsListener {
 
     private final StringRedisTemplate redisTemplate;
-    private final UrlRepository urlRepository;
+    private final LinkLookup linkLookup;
     private final ClickRollupRepository clickRollupRepository;
     private final ClickBreakdownRepository clickBreakdownRepository;
     private final PathioMetrics pathioMetrics;
 
     public static final String PENDING_HASH = "url:pending_clicks";
     private static final String PROCESSING_HASH = "url:pending_clicks:processing";
+    private static final String UNIQUE_PREFIX = "url:unique:";
 
     public static final String PENDING_DAILY_INDEX = "url:pending_daily_days";
     public static final String PENDING_BREAKDOWN_INDEX = "url:pending_breakdown_days";
@@ -96,6 +99,26 @@ public class UrlAnalyticsListener {
         }
     }
 
+    /**
+     * Purges short-code-addressed analytics state when a link is deleted (owner delete or admin
+     * delete), so a later user re-registering the same alias can never inherit the previous owner's
+     * unique-visitor counts or unflushed pending totals (DB-01). The persistent rollup/breakdown
+     * rows are removed by the {@code ON DELETE CASCADE} foreign key (V7); the Redis HLL key and the
+     * pending buffer are short-code-addressed and must be purged here. Best-effort: the DB deletion
+     * is never rolled back by a Redis outage (RED-01). Synchronously handled so the purge completes
+     * before the delete call returns, matching the previous inline behavior.
+     */
+    @EventListener
+    public void handleUrlDeleted(UrlDeletedEvent event) {
+        try {
+            String shortCode = event.shortCode();
+            redisTemplate.delete(UNIQUE_PREFIX + shortCode);
+            redisTemplate.opsForHash().delete(PENDING_HASH, shortCode);
+        } catch (Exception e) {
+            log.warn("Failed to purge analytics keys for deleted shortCode={}", event.shortCode(), e);
+        }
+    }
+
     private void incrementBreakdown(LocalDate date, String shortCode, String dimension, String value) {
         String key = PENDING_BREAKDOWN_PREFIX + date;
         String field = shortCode + BREAKDOWN_SEPARATOR + dimension + BREAKDOWN_SEPARATOR + value;
@@ -147,8 +170,8 @@ public class UrlAnalyticsListener {
                 // Resolve the owning URL at flush time. If it was deleted (or the alias was
                 // re-registered by another user), the buffered clicks are dropped: they belong
                 // to an URL that no longer exists and must never land on a reused alias (DB-01).
-                urlRepository.findByShortCode(shortCode).ifPresent(url ->
-                        urlRepository.incrementClickCountById(url.getId(), shortCode, clicks));
+                linkLookup.findByShortCode(shortCode).ifPresent(ref ->
+                        linkLookup.incrementClicks(ref.id(), shortCode, clicks));
             }
 
             redisTemplate.delete(PROCESSING_HASH);
@@ -223,8 +246,8 @@ public class UrlAnalyticsListener {
         for (Map.Entry<Object, Object> entry : entries.entrySet()) {
             String shortCode = (String) entry.getKey();
             long clicks = Long.parseLong((String) entry.getValue());
-            urlRepository.findByShortCode(shortCode).ifPresent(url ->
-                    clickRollupRepository.upsert(date, shortCode, url.getId(), clicks));
+            linkLookup.findByShortCode(shortCode).ifPresent(ref ->
+                    clickRollupRepository.upsert(date, shortCode, ref.id(), clicks));
         }
     }
 
@@ -235,9 +258,9 @@ public class UrlAnalyticsListener {
                 continue;
             }
             String shortCode = parts[0];
-            urlRepository.findByShortCode(shortCode).ifPresent(url ->
+            linkLookup.findByShortCode(shortCode).ifPresent(ref ->
                     clickBreakdownRepository.upsert(
-                            date, shortCode, url.getId(), parts[1], parts[2],
+                            date, shortCode, ref.id(), parts[1], parts[2],
                             Long.parseLong((String) entry.getValue())));
         }
     }

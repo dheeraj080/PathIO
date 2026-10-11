@@ -6,9 +6,10 @@ import com.pt.pathio.dto.UpdateUrlRequest;
 import com.pt.pathio.dto.UserUrlResponse;
 import com.pt.pathio.entity.UrlEntity;
 import com.pt.pathio.event.UrlClickedEvent;
+import com.pt.pathio.link.api.UrlDeletedEvent;
+import com.pt.pathio.link.api.UrlUpdatedEvent;
 import com.pt.pathio.shared.error.ConflictException;
 import com.pt.pathio.shared.error.ResourceNotFoundException;
-import com.pt.pathio.listener.UrlAnalyticsListener;
 import com.pt.pathio.shared.metrics.PathioMetrics;
 import com.pt.pathio.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
@@ -127,6 +128,7 @@ public class UrlShortenerService {
         urlRepository.save(urlEntity);
 
         warmCache(shortCode, request.longUrl());
+        eventPublisher.publishEvent(new UrlUpdatedEvent(shortCode));
         pathioMetrics.incrementUrlUpdated();
         log.info("Updated destination URL for shortCode={} userId={}", shortCode, userId);
 
@@ -142,7 +144,8 @@ public class UrlShortenerService {
         // redirect cannot resurrect the mapping from a stale cache read. Best-effort: the DB delete
         // is authoritative and must not fail because Redis is unavailable (RED-01).
         writeNegativeCache(CACHE_PREFIX + shortCode, shortCode);
-        purgeAnalyticsKeys(shortCode);
+        // Let the analytics module purge its own short-code-addressed Redis state (DB-01).
+        eventPublisher.publishEvent(new UrlDeletedEvent(shortCode));
         pathioMetrics.incrementUrlDeleted();
         log.info("Deleted shortCode={} userId={}", shortCode, userId);
     }
@@ -153,25 +156,10 @@ public class UrlShortenerService {
 
         urlRepository.delete(urlEntity);
         writeNegativeCache(CACHE_PREFIX + shortCode, shortCode);
-        purgeAnalyticsKeys(shortCode);
+        // Let the analytics module purge its own short-code-addressed Redis state (DB-01).
+        eventPublisher.publishEvent(new UrlDeletedEvent(shortCode));
         pathioMetrics.incrementUrlDeleted();
         log.info("Admin deleted shortCode={}", shortCode);
-    }
-
-    /**
-     * Removes short-code-scoped analytics state so a later user re-registering the same alias can
-     * never inherit the previous owner's unique-visitor counts or unflushed pending totals. The
-     * persistent rollup/breakdown rows are removed by the {@code ON DELETE CASCADE} foreign key
-     * (V7); the Redis HLL key and the pending buffer are short-code-addressed and must be purged
-     * here. Best-effort: DB deletion is never rolled back by a Redis outage.
-     */
-    private void purgeAnalyticsKeys(String shortCode) {
-        try {
-            redisTemplate.delete(UNIQUE_PREFIX + shortCode);
-            redisTemplate.opsForHash().delete(UrlAnalyticsListener.PENDING_HASH, shortCode);
-        } catch (Exception e) {
-            log.warn("Failed to purge analytics keys for shortCode={}", shortCode, e);
-        }
     }
 
     private com.pt.pathio.auth.entity.User requireCurrentUser() {

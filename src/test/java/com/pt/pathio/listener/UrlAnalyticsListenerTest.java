@@ -1,11 +1,11 @@
 package com.pt.pathio.listener;
 
-import com.pt.pathio.entity.UrlEntity;
 import com.pt.pathio.event.UrlClickedEvent;
+import com.pt.pathio.link.api.LinkLookup;
+import com.pt.pathio.link.api.LinkRef;
 import com.pt.pathio.shared.metrics.PathioMetrics;
 import com.pt.pathio.repository.ClickBreakdownRepository;
 import com.pt.pathio.repository.ClickRollupRepository;
-import com.pt.pathio.repository.UrlRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -42,7 +42,7 @@ import static org.mockito.Mockito.when;
 class UrlAnalyticsListenerTest {
 
     private StringRedisTemplate redisTemplate;
-    private UrlRepository urlRepository;
+    private LinkLookup linkLookup;
     private ClickRollupRepository rollupRepository;
     private ClickBreakdownRepository breakdownRepository;
     private UrlAnalyticsListener listener;
@@ -55,7 +55,7 @@ class UrlAnalyticsListenerTest {
     @BeforeEach
     void setUp() {
         redisTemplate = mock(StringRedisTemplate.class);
-        urlRepository = mock(UrlRepository.class);
+        linkLookup = mock(LinkLookup.class);
         rollupRepository = mock(ClickRollupRepository.class);
         breakdownRepository = mock(ClickBreakdownRepository.class);
         hashOps = mock(HashOperations.class);
@@ -69,16 +69,11 @@ class UrlAnalyticsListenerTest {
         when(setOps.members(anyString())).thenReturn(Set.of());
 
         listener = new UrlAnalyticsListener(
-                redisTemplate, urlRepository, rollupRepository, breakdownRepository, mock(PathioMetrics.class));
+                redisTemplate, linkLookup, rollupRepository, breakdownRepository, mock(PathioMetrics.class));
     }
 
-    private UrlEntity url(Long id, String code) {
-        return UrlEntity.builder()
-                .id(id)
-                .longUrl("https://example.com")
-                .shortCode(code)
-                .clickCount(0L)
-                .build();
+    private LinkRef ref(Long id, String code) {
+        return new LinkRef(id, code, "https://example.com", 0L, null, null);
     }
 
     @Test
@@ -88,7 +83,7 @@ class UrlAnalyticsListenerTest {
         String processing = "url:pending_daily:" + TODAY + ":processing";
         when(setOps.members(UrlAnalyticsListener.PENDING_DAILY_INDEX)).thenReturn(Set.of(TODAY.toString()));
         when(hashOps.entries(processing)).thenReturn(Map.of(), Map.of(code, "5"));
-        when(urlRepository.findByShortCode(code)).thenReturn(Optional.of(url(123L, code)));
+        when(linkLookup.findByShortCode(code)).thenReturn(Optional.of(ref(123L, code)));
 
         listener.flushClickCountsToDb();
 
@@ -104,7 +99,7 @@ class UrlAnalyticsListenerTest {
         String processing = "url:pending_daily:" + TODAY + ":processing";
         when(setOps.members(UrlAnalyticsListener.PENDING_DAILY_INDEX)).thenReturn(Set.of(TODAY.toString()));
         when(hashOps.entries(processing)).thenReturn(Map.of(), Map.of(code, "5"));
-        when(urlRepository.findByShortCode(code)).thenReturn(Optional.empty());
+        when(linkLookup.findByShortCode(code)).thenReturn(Optional.empty());
 
         listener.flushClickCountsToDb();
 
@@ -120,7 +115,7 @@ class UrlAnalyticsListenerTest {
         when(setOps.members(UrlAnalyticsListener.PENDING_DAILY_INDEX)).thenReturn(Set.of(TODAY.toString()));
         // Non-empty on the very first read == leftover from a prior cycle.
         when(hashOps.entries(processing)).thenReturn(Map.of(code, "7"));
-        when(urlRepository.findByShortCode(code)).thenReturn(Optional.of(url(123L, code)));
+        when(linkLookup.findByShortCode(code)).thenReturn(Optional.of(ref(123L, code)));
 
         listener.flushClickCountsToDb();
 
@@ -135,7 +130,7 @@ class UrlAnalyticsListenerTest {
         when(setOps.members(UrlAnalyticsListener.PENDING_BREAKDOWN_INDEX)).thenReturn(Set.of(TODAY.toString()));
         when(hashOps.entries(processing))
                 .thenReturn(Map.of(), Map.of(code + "|REFERRER|news.example.com", "2"));
-        when(urlRepository.findByShortCode(code)).thenReturn(Optional.of(url(123L, code)));
+        when(linkLookup.findByShortCode(code)).thenReturn(Optional.of(ref(123L, code)));
 
         listener.flushClickCountsToDb();
 
@@ -148,13 +143,13 @@ class UrlAnalyticsListenerTest {
     void flushTotalsUsesUrlIdAndSkipsDeleted() {
         when(hashOps.entries(UrlAnalyticsListener.PENDING_HASH + ":processing"))
                 .thenReturn(Map.of(), Map.of("exists", "2", "gone", "9"));
-        when(urlRepository.findByShortCode("exists")).thenReturn(Optional.of(url(7L, "exists")));
-        when(urlRepository.findByShortCode("gone")).thenReturn(Optional.empty());
+        when(linkLookup.findByShortCode("exists")).thenReturn(Optional.of(ref(7L, "exists")));
+        when(linkLookup.findByShortCode("gone")).thenReturn(Optional.empty());
 
         listener.flushClickCountsToDb();
 
-        verify(urlRepository).incrementClickCountById(7L, "exists", 2L);
-        verify(urlRepository, never()).incrementClickCountById(any(), eq("gone"), anyLong());
+        verify(linkLookup).incrementClicks(7L, "exists", 2L);
+        verify(linkLookup, never()).incrementClicks(any(), eq("gone"), anyLong());
     }
 
     @Test

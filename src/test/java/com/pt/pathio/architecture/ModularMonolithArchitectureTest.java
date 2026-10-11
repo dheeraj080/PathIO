@@ -92,8 +92,7 @@ class ModularMonolithArchitectureTest {
     void linkDoesNotDependOnAnalytics() {
         ArchRule rule = noClasses()
                 .that().resideInAPackage(LINK)
-                .should().dependOnClassesThat().resideInAPackage(ANALYTICS)
-                .allowEmptyShould(true); // STAGED: remove once com.pt.pathio.link exists (Phase 3)
+                .should().dependOnClassesThat().resideInAPackage(ANALYTICS);
         rule.check(classes);
     }
 
@@ -101,8 +100,7 @@ class ModularMonolithArchitectureTest {
     void linkUsesOnlyTheAuthApi() {
         ArchRule rule = noClasses()
                 .that().resideInAPackage(LINK)
-                .should().dependOnClassesThat().resideInAnyPackage(AUTH_IMPLEMENTATION)
-                .allowEmptyShould(true); // STAGED: remove once com.pt.pathio.link exists (Phase 3)
+                .should().dependOnClassesThat().resideInAnyPackage(AUTH_IMPLEMENTATION);
         rule.check(classes);
     }
 

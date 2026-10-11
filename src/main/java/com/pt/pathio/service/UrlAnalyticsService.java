@@ -6,12 +6,12 @@ import com.pt.pathio.dto.ClickHistoryPoint;
 import com.pt.pathio.dto.UrlAnalyticsResponse;
 import com.pt.pathio.entity.ClickBreakdownEntity;
 import com.pt.pathio.entity.ClickRollupEntity;
-import com.pt.pathio.entity.UrlEntity;
+import com.pt.pathio.link.api.LinkLookup;
+import com.pt.pathio.link.api.LinkRef;
 import com.pt.pathio.shared.error.ResourceNotFoundException;
 import com.pt.pathio.listener.UrlAnalyticsListener;
 import com.pt.pathio.repository.ClickBreakdownRepository;
 import com.pt.pathio.repository.ClickRollupRepository;
-import com.pt.pathio.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -30,7 +30,7 @@ import java.util.UUID;
 @Slf4j
 public class UrlAnalyticsService {
 
-    private final UrlRepository urlRepository;
+    private final LinkLookup linkLookup;
     private final ClickRollupRepository clickRollupRepository;
     private final ClickBreakdownRepository clickBreakdownRepository;
     private final StringRedisTemplate redisTemplate;
@@ -43,7 +43,7 @@ public class UrlAnalyticsService {
     private static final int MAX_HISTORY_DAYS = 365;
 
     public UrlAnalyticsResponse getUrlAnalytics(String shortCode, UUID userId) {
-        UrlEntity urlEntity = requireOwnedUrl(shortCode, userId);
+        LinkRef link = requireOwnedUrl(shortCode, userId);
 
         long pendingClicks = 0;
         try {
@@ -55,28 +55,28 @@ public class UrlAnalyticsService {
             log.warn("Failed to read pending clicks from Redis for {}", shortCode, e);
         }
 
-        long totalClicks = urlEntity.getClickCount() + pendingClicks;
+        long totalClicks = link.clickCount() + pendingClicks;
         String baseUrl = domain.endsWith("/") ? domain : domain + "/";
 
         return new UrlAnalyticsResponse(
-                urlEntity.getShortCode(),
-                baseUrl + urlEntity.getShortCode(),
-                urlEntity.getLongUrl(),
+                link.shortCode(),
+                baseUrl + link.shortCode(),
+                link.longUrl(),
                 totalClicks,
                 uniqueClicks(shortCode),
-                urlEntity.getCreatedAt()
+                link.createdAt()
         );
     }
 
     public List<ClickHistoryPoint> getClickHistory(String shortCode, UUID userId, int days) {
-        UrlEntity urlEntity = requireOwnedUrl(shortCode, userId);
+        LinkRef link = requireOwnedUrl(shortCode, userId);
 
         int window = normalizeDays(days);
         LocalDate today = LocalDate.now(java.time.ZoneOffset.UTC);
         LocalDate from = today.minusDays(window - 1L);
 
         Map<LocalDate, Long> countsByDate = new HashMap<>();
-        for (ClickRollupEntity row : clickRollupRepository.findHistory(urlEntity.getId(), from)) {
+        for (ClickRollupEntity row : clickRollupRepository.findHistory(link.id(), from)) {
             countsByDate.merge(row.getId().getClickDate(), row.getClicks(), Long::sum);
         }
 
@@ -88,34 +88,34 @@ public class UrlAnalyticsService {
     }
 
     public ClickBreakdownResponse getClickBreakdown(String shortCode, UUID userId, int days) {
-        UrlEntity urlEntity = requireOwnedUrl(shortCode, userId);
+        LinkRef link = requireOwnedUrl(shortCode, userId);
 
         int window = normalizeDays(days);
         LocalDate from = LocalDate.now(java.time.ZoneOffset.UTC).minusDays(window - 1L);
 
         return new ClickBreakdownResponse(
                 toDimensionCounts(clickBreakdownRepository.findBreakdown(
-                        urlEntity.getId(), UrlAnalyticsListener.DIMENSION_REFERRER, from)),
+                        link.id(), UrlAnalyticsListener.DIMENSION_REFERRER, from)),
                 toDimensionCounts(clickBreakdownRepository.findBreakdown(
-                        urlEntity.getId(), UrlAnalyticsListener.DIMENSION_DEVICE, from))
+                        link.id(), UrlAnalyticsListener.DIMENSION_DEVICE, from))
         );
     }
 
     public AnalyticsOverviewResponse getOverview(UUID userId) {
-        long totalUrls = urlRepository.countByUserId(userId);
-        long totalClicks = urlRepository.sumClicksByUserId(userId);
+        long totalUrls = linkLookup.countByOwner(userId);
+        long totalClicks = linkLookup.sumClicksByOwner(userId);
         return new AnalyticsOverviewResponse(totalUrls, totalClicks);
     }
 
-    private UrlEntity requireOwnedUrl(String shortCode, UUID userId) {
-        UrlEntity urlEntity = urlRepository.findByShortCode(shortCode)
+    private LinkRef requireOwnedUrl(String shortCode, UUID userId) {
+        LinkRef link = linkLookup.findByShortCode(shortCode)
                 .orElseThrow(() -> new ResourceNotFoundException("URL not found for short code: " + shortCode));
 
         // Ownership enforcement: Do not leak analytics or existence of URLs belonging to other users
-        if (urlEntity.getUser() == null || !urlEntity.getUser().getId().equals(userId)) {
+        if (link.ownerId() == null || !link.ownerId().equals(userId)) {
             throw new ResourceNotFoundException("URL not found for short code: " + shortCode);
         }
-        return urlEntity;
+        return link;
     }
 
     private long uniqueClicks(String shortCode) {
