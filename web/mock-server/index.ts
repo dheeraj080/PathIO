@@ -11,11 +11,13 @@ import {
   createUser,
   deleteOwnedLink,
   deleteUserRecord,
-  findLink,
   findUserById,
   getClickBreakdown,
   getClickHistory,
+  getGlobalBreakdown,
+  getGlobalHistory,
   getOverview,
+  getTopLinks,
   getUrlAnalytics,
   listAllLinks,
   listApiKeys,
@@ -24,6 +26,7 @@ import {
   loginOrRegisterOAuth,
   MockHttpError,
   pageOf,
+  recordClick,
   registerRefreshToken,
   resetMockData,
   revokeApiKey,
@@ -298,6 +301,24 @@ app.get('/api/v1/analytics/overview', (c) => {
   return c.json(getOverview(user.id))
 })
 
+app.get('/api/v1/analytics/history', (c) => {
+  const user = requireUser(c)
+  const days = Number.parseInt(c.req.query('days') ?? '30', 10)
+  return c.json(getGlobalHistory(user.id, days))
+})
+
+app.get('/api/v1/analytics/breakdown', (c) => {
+  const user = requireUser(c)
+  const days = Number.parseInt(c.req.query('days') ?? '30', 10)
+  return c.json(getGlobalBreakdown(user.id, days))
+})
+
+app.get('/api/v1/analytics/top-links', (c) => {
+  const user = requireUser(c)
+  const limit = Number.parseInt(c.req.query('limit') ?? '5', 10)
+  return c.json(getTopLinks(user.id, limit))
+})
+
 app.get('/api/v1/analytics/urls/:shortCode/history', (c) => {
   const user = requireUser(c)
   const days = Number.parseInt(c.req.query('days') ?? '30', 10)
@@ -336,11 +357,7 @@ app.delete('/api/v1/api-keys/:id', (c) => {
 
 // --- public redirect (last) ------------------------------------------------
 app.get('/api/v1/:shortCode', (c) => {
-  const link = findLink(c.req.param('shortCode'))
-  if (!link) {
-    throw new MockHttpError(404, 'Not Found', `URL not found for code: ${c.req.param('shortCode')}`)
-  }
-  link.clickCount += 1
+  const link = recordClick(c.req.param('shortCode'))
   return c.redirect(link.longUrl, 302)
 })
 

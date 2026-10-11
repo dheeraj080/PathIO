@@ -9,7 +9,6 @@ import {
   createUser,
   deleteOwnedLink,
   deleteUserRecord,
-  findLink,
   findUserById,
   getClickBreakdown,
   getClickHistory,
@@ -25,6 +24,7 @@ import {
   loginOrRegisterOAuth,
   MockHttpError,
   consumeRefreshToken,
+  recordClick,
   registerRefreshToken,
   resetMockData,
   revokeApiKey,
@@ -422,15 +422,12 @@ export const handlers = [
 
   // --- public redirect (last: single-segment catch-all) ------------------
   http.get(u('/api/v1/:shortCode'), ({ params }) => {
-    const link = findLink(String(params.shortCode))
-    if (!link) {
-      return HttpResponse.json(
-        { status: 404, error: 'Not Found', message: `URL not found for code: ${params.shortCode}` },
-        { status: 404 },
-      )
+    try {
+      const link = recordClick(String(params.shortCode))
+      return HttpResponse.redirect(link.longUrl, 302)
+    } catch (error) {
+      return errorResponse(error)
     }
-    link.clickCount += 1
-    return HttpResponse.redirect(link.longUrl, 302)
   }),
 ]
 
