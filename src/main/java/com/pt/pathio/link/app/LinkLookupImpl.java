@@ -1,9 +1,9 @@
 package com.pt.pathio.link.app;
 
-import com.pt.pathio.entity.UrlEntity;
+import com.pt.pathio.link.domain.UrlEntity;
 import com.pt.pathio.link.api.LinkLookup;
 import com.pt.pathio.link.api.LinkRef;
-import com.pt.pathio.repository.UrlRepository;
+import com.pt.pathio.link.persistence.UrlRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

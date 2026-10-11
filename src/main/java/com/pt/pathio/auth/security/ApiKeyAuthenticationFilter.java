@@ -2,9 +2,9 @@ package com.pt.pathio.auth.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pt.pathio.auth.api.UserPrincipal;
-import com.pt.pathio.auth.entity.ApiKey;
-import com.pt.pathio.auth.entity.User;
-import com.pt.pathio.auth.service.ApiKeyService;
+import com.pt.pathio.auth.domain.ApiKey;
+import com.pt.pathio.auth.domain.User;
+import com.pt.pathio.auth.app.ApiKeyService;
 import com.pt.pathio.shared.error.ApiError;
 import com.pt.pathio.shared.web.RequestAttributes;
 import jakarta.servlet.FilterChain;

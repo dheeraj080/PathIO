@@ -1,12 +1,12 @@
 package com.pt.pathio.auth.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pt.pathio.auth.entity.Provider;
-import com.pt.pathio.auth.entity.RefreshToken;
-import com.pt.pathio.auth.entity.User;
-import com.pt.pathio.auth.exceptions.ProviderIdentityException;
-import com.pt.pathio.auth.repository.UserRepository;
-import com.pt.pathio.auth.service.RefreshTokenService;
+import com.pt.pathio.auth.domain.Provider;
+import com.pt.pathio.auth.domain.RefreshToken;
+import com.pt.pathio.auth.domain.User;
+import com.pt.pathio.auth.api.ProviderIdentityException;
+import com.pt.pathio.auth.persistence.UserRepository;
+import com.pt.pathio.auth.app.RefreshTokenService;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

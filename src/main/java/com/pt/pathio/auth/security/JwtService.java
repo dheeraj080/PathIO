@@ -1,7 +1,7 @@
 package com.pt.pathio.auth.security;
 
-import com.pt.pathio.auth.entity.Role;
-import com.pt.pathio.auth.entity.User;
+import com.pt.pathio.auth.domain.Role;
+import com.pt.pathio.auth.domain.User;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.Getter;

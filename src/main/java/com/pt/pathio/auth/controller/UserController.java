@@ -2,7 +2,7 @@ package com.pt.pathio.auth.controller;
 
 import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.auth.dto.UserDTO;
-import com.pt.pathio.auth.service.UserService;
+import com.pt.pathio.auth.app.UserService;
 import lombok.AllArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

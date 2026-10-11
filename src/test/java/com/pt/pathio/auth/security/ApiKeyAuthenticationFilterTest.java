@@ -1,10 +1,10 @@
 package com.pt.pathio.auth.security;
 
 import com.pt.pathio.auth.api.UserPrincipal;
-import com.pt.pathio.auth.entity.ApiKey;
-import com.pt.pathio.auth.entity.Role;
-import com.pt.pathio.auth.entity.User;
-import com.pt.pathio.auth.service.ApiKeyService;
+import com.pt.pathio.auth.domain.ApiKey;
+import com.pt.pathio.auth.domain.Role;
+import com.pt.pathio.auth.domain.User;
+import com.pt.pathio.auth.app.ApiKeyService;
 import com.pt.pathio.shared.web.RequestAttributes;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;

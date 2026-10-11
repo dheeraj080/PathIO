@@ -1,6 +1,6 @@
 package com.pt.pathio.auth.security;
 
-import com.pt.pathio.auth.entity.User;
+import com.pt.pathio.auth.domain.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
 import org.junit.jupiter.api.DisplayName;

@@ -18,13 +18,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>The four modules are {@code shared}, {@code auth}, {@code link} and
  * {@code analytics}. Allowed application dependencies are:
  * {@code auth -> shared}, {@code link -> {shared, auth.api}} and
- * {@code analytics -> {shared, link.api}}.</p>
+ * {@code analytics -> {shared, auth.api, link.api}}. A consuming module may touch
+ * only another module's published {@code *.api} package, never its implementation
+ * packages.</p>
  *
- * <p><b>Staging note.</b> Rules only become active once a module's package exists. Until then
- * the affected rules carry an explicit {@code allowEmptyShould(true)} (documented inline), which
- * must be removed as soon as the package is created. Phase 8 performs a cleanup pass that removes
- * every remaining {@code allowEmptyShould} so no rule can stay silently vacuous. Rules are never
- * weakened in their assertions.</p>
+ * <p><b>Staging note.</b> Rules were introduced incrementally, each becoming active only once the
+ * relevant module package existed; a staged rule carried an {@code allowEmptyShould(true)} until
+ * then. As of the Phase 7 package organization all four modules ({@code shared}, {@code auth},
+ * {@code link}, {@code analytics}) exist and no {@code allowEmptyShould} remains, so every rule
+ * below is enforced against real classes. Rules are never weakened in their assertions.</p>
  */
 class ModularMonolithArchitectureTest {
 
@@ -35,7 +37,6 @@ class ModularMonolithArchitectureTest {
 
     /** Non-API authentication packages a consuming module must never reach into. */
     private static final String[] AUTH_IMPLEMENTATION = {
-            // Target (post-relocation) implementation packages.
             "com.pt.pathio.auth.controller..",
             "com.pt.pathio.auth.app..",
             "com.pt.pathio.auth.domain..",
@@ -43,15 +44,7 @@ class ModularMonolithArchitectureTest {
             "com.pt.pathio.auth.security..",
             "com.pt.pathio.auth.config..",
             "com.pt.pathio.auth.internal..",
-            "com.pt.pathio.auth.dto..",
-            // Current pre-relocation equivalents (rename in a later phase), kept so the rule is
-            // enforceable now rather than only after the package move.
-            "com.pt.pathio.auth.service..",
-            "com.pt.pathio.auth.repository..",
-            "com.pt.pathio.auth.entity..",
-            "com.pt.pathio.auth.helper..",
-            "com.pt.pathio.auth.exceptions..",
-            "com.pt.pathio.auth"
+            "com.pt.pathio.auth.dto.."
     };
 
     /** Non-API link packages a consuming module must never reach into. */
@@ -114,11 +107,14 @@ class ModularMonolithArchitectureTest {
     }
 
     @Test
-    void analyticsDependsOnlyOnSharedAndLinkApi() {
+    void analyticsUsesOnlyPublishedApis() {
+        // analytics may read another module's published contract (auth.api for the authenticated
+        // principal, link.api for link resolution) but must never reach into an implementation
+        // package. Mirrors linkUsesOnlyTheAuthApi; no auth/link implementation import is allowed.
         ArchRule rule = noClasses()
                 .that().resideInAPackage(ANALYTICS)
-                .should().dependOnClassesThat().resideInAnyPackage(prepend(AUTH, LINK_IMPLEMENTATION))
-                .allowEmptyShould(true); // STAGED: remove once com.pt.pathio.analytics exists (Phase 7)
+                .should().dependOnClassesThat()
+                .resideInAnyPackage(concat(AUTH_IMPLEMENTATION, LINK_IMPLEMENTATION));
         rule.check(classes);
     }
 
@@ -131,10 +127,10 @@ class ModularMonolithArchitectureTest {
         rule.check(classes);
     }
 
-    private static String[] prepend(String first, String[] rest) {
-        String[] combined = new String[rest.length + 1];
-        combined[0] = first;
-        System.arraycopy(rest, 0, combined, 1, rest.length);
+    private static String[] concat(String[] a, String[] b) {
+        String[] combined = new String[a.length + b.length];
+        System.arraycopy(a, 0, combined, 0, a.length);
+        System.arraycopy(b, 0, combined, a.length, b.length);
         return combined;
     }
 }

@@ -1,7 +1,7 @@
 package com.pt.pathio.auth.dto;
 
 
-import com.pt.pathio.auth.entity.Provider;
+import com.pt.pathio.auth.domain.Provider;
 import lombok.*;
 
 import java.time.Instant;

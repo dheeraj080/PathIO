@@ -1,15 +1,15 @@
 package com.pt.pathio.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pt.pathio.auth.entity.Provider;
-import com.pt.pathio.auth.entity.RefreshToken;
-import com.pt.pathio.auth.entity.User;
-import com.pt.pathio.auth.repository.UserRepository;
+import com.pt.pathio.auth.domain.Provider;
+import com.pt.pathio.auth.domain.RefreshToken;
+import com.pt.pathio.auth.domain.User;
+import com.pt.pathio.auth.persistence.UserRepository;
 import com.pt.pathio.auth.security.CookieService;
 import com.pt.pathio.auth.security.JwtService;
 import com.pt.pathio.auth.security.OAuth2FailureHandler;
 import com.pt.pathio.auth.security.OAuth2SuccessHandler;
-import com.pt.pathio.auth.service.RefreshTokenService;
+import com.pt.pathio.auth.app.RefreshTokenService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;

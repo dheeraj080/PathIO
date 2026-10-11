@@ -1,6 +1,6 @@
 package com.pt.pathio.auth.dto;
 
-import com.pt.pathio.auth.entity.ApiKey;
+import com.pt.pathio.auth.domain.ApiKey;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.Instant;

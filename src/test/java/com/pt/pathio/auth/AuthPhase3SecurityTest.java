@@ -2,11 +2,11 @@ package com.pt.pathio.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pt.pathio.auth.api.UserPrincipal;
-import com.pt.pathio.auth.entity.Provider;
-import com.pt.pathio.auth.entity.User;
-import com.pt.pathio.auth.repository.UserRepository;
-import com.pt.pathio.entity.UrlEntity;
-import com.pt.pathio.repository.UrlRepository;
+import com.pt.pathio.auth.domain.Provider;
+import com.pt.pathio.auth.domain.User;
+import com.pt.pathio.auth.persistence.UserRepository;
+import com.pt.pathio.link.domain.UrlEntity;
+import com.pt.pathio.link.persistence.UrlRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

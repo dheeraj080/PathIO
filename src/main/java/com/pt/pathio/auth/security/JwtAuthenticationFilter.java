@@ -3,7 +3,7 @@ package com.pt.pathio.auth.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.shared.error.ApiError;
-import com.pt.pathio.auth.repository.UserRepository;
+import com.pt.pathio.auth.persistence.UserRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.Jws;

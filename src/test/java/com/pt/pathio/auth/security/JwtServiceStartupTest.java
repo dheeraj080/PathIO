@@ -2,7 +2,7 @@ package com.pt.pathio.auth.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jws;
-import com.pt.pathio.auth.entity.User;
+import com.pt.pathio.auth.domain.User;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;

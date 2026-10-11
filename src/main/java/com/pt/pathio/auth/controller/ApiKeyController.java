@@ -4,7 +4,7 @@ import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.auth.dto.ApiKeyResponse;
 import com.pt.pathio.auth.dto.CreateApiKeyRequest;
 import com.pt.pathio.auth.dto.CreateApiKeyResponse;
-import com.pt.pathio.auth.service.ApiKeyService;
+import com.pt.pathio.auth.app.ApiKeyService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
