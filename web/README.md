@@ -2,7 +2,7 @@
 
 React + Vite + TypeScript + Tailwind single-page app for the PathIO URL shortener API.
 
-See [`../plan-web.md`](../plan-web.md) for the full build plan.
+The working feature plan lives in [`../internal/plan.md`](../internal/plan.md) (local, git-ignored).
 
 ## Requirements
 
@@ -83,7 +83,7 @@ to `/login?redirect=<path>` and returns there after sign-in.
 
 ## Mocking
 
-Two layers, both contract-faithful to the current backend (`plan-web.md` §6):
+Two layers, both contract-faithful to the current backend:
 
 1. **MSW** — in-process handlers used by Vitest (`src/test/setup.ts`). Also usable in the browser
    by setting `VITE_USE_MOCKS=true` (run `npm run msw:init` once). Note: the OAuth *popup* cannot be

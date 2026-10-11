@@ -10,7 +10,7 @@ for users and a dedicated admin console.
 │  Landing · Login · Signup │ ─────► │  Security → Controllers → Services          │
 │  Dashboard · Admin · …    │  JSON  │       │                  │                  │
 └───────────────────────────┘        │  PostgreSQL 16     Redis 7                 │
-   Google/GitHub OAuth popup          │  (Flyway V1–V5)    (cache · HLL · buffers) │
+   Google/GitHub OAuth popup          │  (Flyway V1–V8)    (cache · HLL · buffers) │
         └── postMessage ─────────────►└─────────────────────────────────────────────┘
 ```
 
