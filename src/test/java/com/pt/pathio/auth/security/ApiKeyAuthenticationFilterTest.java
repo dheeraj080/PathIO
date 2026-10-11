@@ -5,6 +5,7 @@ import com.pt.pathio.auth.entity.ApiKey;
 import com.pt.pathio.auth.entity.Role;
 import com.pt.pathio.auth.entity.User;
 import com.pt.pathio.auth.service.ApiKeyService;
+import com.pt.pathio.shared.web.RequestAttributes;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
@@ -95,7 +96,7 @@ class ApiKeyAuthenticationFilterTest {
         assertThat(auth).isNotNull();
         assertThat(auth.getPrincipal()).isEqualTo(new UserPrincipal(USER_ID, "alice@example.com"));
         assertThat(auth.getAuthorities().stream().map(a -> a.getAuthority())).contains("ROLE_USER");
-        assertThat(request.getAttribute(ApiKeyAuthenticationFilter.ATTR_API_KEY_HASH)).isEqualTo(HASH);
+        assertThat(request.getAttribute(RequestAttributes.ATTR_API_KEY_HASH)).isEqualTo(HASH);
         verify(apiKeyService).markUsed(1L);
         verify(chain).doFilter(request, response);
     }

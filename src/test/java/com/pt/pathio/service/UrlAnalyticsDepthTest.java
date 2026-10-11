@@ -11,7 +11,7 @@ import com.pt.pathio.dto.ShortenUrlResponse;
 import com.pt.pathio.dto.UrlAnalyticsResponse;
 import com.pt.pathio.entity.ClickRollupEntity;
 import com.pt.pathio.entity.UrlEntity;
-import com.pt.pathio.exception.ResourceNotFoundException;
+import com.pt.pathio.shared.error.ResourceNotFoundException;
 import com.pt.pathio.listener.UrlAnalyticsListener;
 import com.pt.pathio.repository.ClickRollupRepository;
 import com.pt.pathio.repository.UrlRepository;

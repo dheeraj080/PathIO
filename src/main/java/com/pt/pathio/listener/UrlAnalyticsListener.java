@@ -1,7 +1,7 @@
 package com.pt.pathio.listener;
 
 import com.pt.pathio.event.UrlClickedEvent;
-import com.pt.pathio.metrics.PathioMetrics;
+import com.pt.pathio.shared.metrics.PathioMetrics;
 import com.pt.pathio.repository.ClickBreakdownRepository;
 import com.pt.pathio.repository.ClickRollupRepository;
 import com.pt.pathio.repository.UrlRepository;

@@ -1,4 +1,4 @@
-package com.pt.pathio.config;
+package com.pt.pathio.auth.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

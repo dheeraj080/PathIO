@@ -1,6 +1,6 @@
-package com.pt.pathio.config;
+package com.pt.pathio.shared.web;
 
-import com.pt.pathio.interceptor.RateLimitInterceptor;
+import com.pt.pathio.shared.ratelimit.RateLimitInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

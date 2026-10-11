@@ -1,4 +1,4 @@
-package com.pt.pathio.auth.dto;
+package com.pt.pathio.shared.error;
 
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;

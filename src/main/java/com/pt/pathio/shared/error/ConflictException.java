@@ -1,4 +1,4 @@
-package com.pt.pathio.exception;
+package com.pt.pathio.shared.error;
 
 /**
  * Thrown when a requested resource conflicts with existing state,

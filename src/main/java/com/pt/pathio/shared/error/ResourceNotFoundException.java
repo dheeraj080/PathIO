@@ -1,4 +1,4 @@
-package com.pt.pathio.exception;
+package com.pt.pathio.shared.error;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

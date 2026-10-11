@@ -76,8 +76,7 @@ class ModularMonolithArchitectureTest {
     void sharedDependsOnNoApplicationModule() {
         ArchRule rule = noClasses()
                 .that().resideInAPackage(SHARED)
-                .should().dependOnClassesThat().resideInAnyPackage(AUTH, LINK, ANALYTICS)
-                .allowEmptyShould(true); // STAGED: remove once com.pt.pathio.shared exists (Phase 2)
+                .should().dependOnClassesThat().resideInAnyPackage(AUTH, LINK, ANALYTICS);
         rule.check(classes);
     }
 

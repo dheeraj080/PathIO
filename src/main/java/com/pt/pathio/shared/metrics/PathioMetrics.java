@@ -1,4 +1,4 @@
-package com.pt.pathio.metrics;
+package com.pt.pathio.shared.metrics;
 
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.DistributionSummary;

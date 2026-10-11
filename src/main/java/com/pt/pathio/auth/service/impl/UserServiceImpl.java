@@ -4,7 +4,7 @@ import com.pt.pathio.auth.dto.UserDTO;
 import com.pt.pathio.auth.entity.Provider;
 import com.pt.pathio.auth.entity.Role;
 import com.pt.pathio.auth.entity.User;
-import com.pt.pathio.exception.ResourceNotFoundException;
+import com.pt.pathio.shared.error.ResourceNotFoundException;
 import com.pt.pathio.auth.helper.UserHelper;
 import com.pt.pathio.auth.repository.RoleRepository;
 import com.pt.pathio.auth.repository.UserRepository;

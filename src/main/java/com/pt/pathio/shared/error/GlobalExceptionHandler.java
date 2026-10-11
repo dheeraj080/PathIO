@@ -1,8 +1,5 @@
-package com.pt.pathio.auth.exceptions;
+package com.pt.pathio.shared.error;
 
-import com.pt.pathio.auth.dto.ApiError;
-import com.pt.pathio.exception.ConflictException;
-import com.pt.pathio.exception.ResourceNotFoundException;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
@@ -61,12 +58,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiError> handleConflict(ConflictException ex, HttpServletRequest request) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(
                 ApiError.of(409, "Conflict", ex.getMessage(), request.getRequestURI()));
-    }
-
-    @ExceptionHandler(OAuthOnlyException.class)
-    public ResponseEntity<ApiError> handleOAuthOnly(OAuthOnlyException ex, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
-                ApiError.of(403, "OAUTH_ONLY", ex.getMessage(), request.getRequestURI()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)

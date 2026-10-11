@@ -1,12 +1,12 @@
-package com.pt.pathio.config;
+package com.pt.pathio.auth.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
-import com.pt.pathio.auth.dto.ApiError;
 import com.pt.pathio.auth.security.ApiKeyAuthenticationFilter;
 import com.pt.pathio.auth.security.CookieAuthOriginFilter;
 import com.pt.pathio.auth.security.CustomUserDetailService;
 import com.pt.pathio.auth.security.JwtAuthenticationFilter;
+import com.pt.pathio.shared.error.ApiError;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

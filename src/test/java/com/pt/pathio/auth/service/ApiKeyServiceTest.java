@@ -6,7 +6,7 @@ import com.pt.pathio.auth.entity.Role;
 import com.pt.pathio.auth.entity.User;
 import com.pt.pathio.auth.repository.ApiKeyRepository;
 import com.pt.pathio.auth.repository.UserRepository;
-import com.pt.pathio.exception.ResourceNotFoundException;
+import com.pt.pathio.shared.error.ResourceNotFoundException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

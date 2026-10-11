@@ -1,9 +1,8 @@
-package com.pt.pathio.interceptor;
+package com.pt.pathio.shared.ratelimit;
 
-import com.pt.pathio.auth.security.ApiKeyAuthenticationFilter;
-import com.pt.pathio.metrics.PathioMetrics;
-import com.pt.pathio.service.RateLimiterService;
-import com.pt.pathio.service.RateLimiterService.BucketConsumption;
+import com.pt.pathio.shared.metrics.PathioMetrics;
+import com.pt.pathio.shared.ratelimit.RateLimiterService.BucketConsumption;
+import com.pt.pathio.shared.web.RequestAttributes;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +23,7 @@ public class RateLimitInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        Object apiKeyHash = request.getAttribute(ApiKeyAuthenticationFilter.ATTR_API_KEY_HASH);
+        Object apiKeyHash = request.getAttribute(RequestAttributes.ATTR_API_KEY_HASH);
         String bucketIdentity = apiKeyHash instanceof String hash && !hash.isBlank()
                 ? "api key"                      // per-key bucket, never logs the digest
                 : extractClientIp(request);      // per-IP bucket

@@ -2,8 +2,8 @@ package com.pt.pathio.service;
 
 import com.pt.pathio.auth.repository.UserRepository;
 import com.pt.pathio.entity.UrlEntity;
-import com.pt.pathio.exception.ResourceNotFoundException;
-import com.pt.pathio.metrics.PathioMetrics;
+import com.pt.pathio.shared.error.ResourceNotFoundException;
+import com.pt.pathio.shared.metrics.PathioMetrics;
 import com.pt.pathio.repository.UrlRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

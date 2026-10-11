@@ -6,7 +6,7 @@ import com.pt.pathio.auth.entity.ApiKey;
 import com.pt.pathio.auth.entity.User;
 import com.pt.pathio.auth.repository.ApiKeyRepository;
 import com.pt.pathio.auth.repository.UserRepository;
-import com.pt.pathio.exception.ResourceNotFoundException;
+import com.pt.pathio.shared.error.ResourceNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;

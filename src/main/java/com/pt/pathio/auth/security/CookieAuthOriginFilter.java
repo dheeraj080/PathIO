@@ -1,7 +1,7 @@
 package com.pt.pathio.auth.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.pt.pathio.auth.dto.ApiError;
+import com.pt.pathio.shared.error.ApiError;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

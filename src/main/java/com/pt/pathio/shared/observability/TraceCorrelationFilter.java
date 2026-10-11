@@ -1,4 +1,4 @@
-package com.pt.pathio.filter;
+package com.pt.pathio.shared.observability;
 
 import io.micrometer.tracing.Tracer;
 import jakarta.servlet.*;
@@ -40,7 +40,7 @@ public class TraceCorrelationFilter implements Filter {
                 MDC.put(MDC_TRACE_ID, traceId);
             }
 
-            // Expose traceId in the response headers for client/frontend debugging
+            // Expose traceId in the response headers for client/web debugging
             httpResponse.setHeader(TRACE_HEADER, traceId);
 
             try {

@@ -2,10 +2,11 @@ package com.pt.pathio.auth.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pt.pathio.auth.UserPrincipal;
-import com.pt.pathio.auth.dto.ApiError;
 import com.pt.pathio.auth.entity.ApiKey;
 import com.pt.pathio.auth.entity.User;
 import com.pt.pathio.auth.service.ApiKeyService;
+import com.pt.pathio.shared.error.ApiError;
+import com.pt.pathio.shared.web.RequestAttributes;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,8 +37,6 @@ import java.time.Instant;
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
     public static final String HEADER = "X-API-Key";
-    /** Request attribute the rate-limit interceptor reads to bucket by key instead of client IP. */
-    public static final String ATTR_API_KEY_HASH = "pathio.api-key-hash";
 
     private final ApiKeyService apiKeyService;
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
@@ -82,7 +81,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         // The interceptor uses the digest to rate-limit per key and to emit X-RateLimit-* headers.
-        request.setAttribute(ATTR_API_KEY_HASH, keyHash);
+        request.setAttribute(RequestAttributes.ATTR_API_KEY_HASH, keyHash);
         apiKeyService.markUsed(found.get().getId());
 
         filterChain.doFilter(request, response);
