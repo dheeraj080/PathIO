@@ -35,6 +35,7 @@ class ModularMonolithArchitectureTest {
 
     /** Non-API authentication packages a consuming module must never reach into. */
     private static final String[] AUTH_IMPLEMENTATION = {
+            // Target (post-relocation) implementation packages.
             "com.pt.pathio.auth.controller..",
             "com.pt.pathio.auth.app..",
             "com.pt.pathio.auth.domain..",
@@ -42,7 +43,15 @@ class ModularMonolithArchitectureTest {
             "com.pt.pathio.auth.security..",
             "com.pt.pathio.auth.config..",
             "com.pt.pathio.auth.internal..",
-            "com.pt.pathio.auth.dto.."
+            "com.pt.pathio.auth.dto..",
+            // Current pre-relocation equivalents (rename in a later phase), kept so the rule is
+            // enforceable now rather than only after the package move.
+            "com.pt.pathio.auth.service..",
+            "com.pt.pathio.auth.repository..",
+            "com.pt.pathio.auth.entity..",
+            "com.pt.pathio.auth.helper..",
+            "com.pt.pathio.auth.exceptions..",
+            "com.pt.pathio.auth"
     };
 
     /** Non-API link packages a consuming module must never reach into. */

@@ -1,6 +1,6 @@
 package com.pt.pathio.service;
 
-import com.pt.pathio.auth.UserPrincipal;
+import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.auth.entity.Provider;
 import com.pt.pathio.auth.entity.User;
 import com.pt.pathio.auth.repository.UserRepository;

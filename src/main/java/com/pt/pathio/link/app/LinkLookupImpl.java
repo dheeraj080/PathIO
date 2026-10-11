@@ -54,7 +54,7 @@ public class LinkLookupImpl implements LinkLookup {
                 entity.getLongUrl(),
                 entity.getClickCount(),
                 entity.getCreatedAt(),
-                entity.getUser() == null ? null : entity.getUser().getId()
+                entity.getOwnerId()
         );
     }
 }

@@ -1,6 +1,7 @@
 package com.pt.pathio.auth;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.auth.entity.Provider;
 import com.pt.pathio.auth.entity.User;
 import com.pt.pathio.auth.repository.UserRepository;

@@ -1,6 +1,6 @@
 package com.pt.pathio.auth.controller;
 
-import com.pt.pathio.auth.UserPrincipal;
+import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.auth.dto.ApiKeyResponse;
 import com.pt.pathio.auth.dto.CreateApiKeyRequest;
 import com.pt.pathio.auth.dto.CreateApiKeyResponse;

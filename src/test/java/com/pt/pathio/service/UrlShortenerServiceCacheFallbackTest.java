@@ -1,6 +1,6 @@
 package com.pt.pathio.service;
 
-import com.pt.pathio.auth.repository.UserRepository;
+import com.pt.pathio.auth.api.UserLookup;
 import com.pt.pathio.entity.UrlEntity;
 import com.pt.pathio.shared.error.ResourceNotFoundException;
 import com.pt.pathio.shared.metrics.PathioMetrics;
@@ -58,7 +58,7 @@ class UrlShortenerServiceCacheFallbackTest {
                 mock(ApplicationEventPublisher.class),
                 redisTemplate,
                 pathioMetrics,
-                mock(UserRepository.class));
+                mock(UserLookup.class));
     }
 
     private UrlEntity entity() {

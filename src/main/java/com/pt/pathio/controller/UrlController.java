@@ -1,6 +1,6 @@
 package com.pt.pathio.controller;
 
-import com.pt.pathio.auth.UserPrincipal;
+import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.dto.ShortenUrlRequest;
 import com.pt.pathio.dto.ShortenUrlResponse;
 import com.pt.pathio.dto.UpdateUrlRequest;

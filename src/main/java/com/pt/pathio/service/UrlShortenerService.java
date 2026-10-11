@@ -1,5 +1,7 @@
 package com.pt.pathio.service;
 
+import com.pt.pathio.auth.api.UserLookup;
+import com.pt.pathio.auth.api.UserPrincipal;
 import com.pt.pathio.dto.ShortenUrlRequest;
 import com.pt.pathio.dto.ShortenUrlResponse;
 import com.pt.pathio.dto.UpdateUrlRequest;
@@ -19,6 +21,8 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
@@ -43,7 +47,7 @@ public class UrlShortenerService {
     private final ApplicationEventPublisher eventPublisher;
     private final StringRedisTemplate redisTemplate;
     private final PathioMetrics pathioMetrics;
-    private final com.pt.pathio.auth.repository.UserRepository userRepository;
+    private final UserLookup userLookup;
 
     @Value("${app.shortener.domain:https://path.io/}")
     private String domain;
@@ -67,7 +71,7 @@ public class UrlShortenerService {
             String longUrl = request.longUrl();
             validateUrlSafety(longUrl);
 
-            com.pt.pathio.auth.entity.User user = requireCurrentUser();
+            UUID ownerId = requireCurrentUserId();
 
             String requestedAlias = normalizeAlias(request.customAlias());
             if (requestedAlias != null) {
@@ -87,8 +91,8 @@ public class UrlShortenerService {
                     .longUrl(longUrl)
                     .shortCode(shortCode)
                     .clickCount(0L)
-                    .user(user)
                     .build();
+            urlEntity.setOwnerId(ownerId);
 
             try {
                 urlRepository.save(urlEntity);
@@ -102,7 +106,7 @@ public class UrlShortenerService {
 
             String baseUrl = baseUrl();
             log.info("Successfully shortened URL: rawId={} shortCode={} userId={} customAlias={}",
-                    rawId, shortCode, user.getId(), requestedAlias != null);
+                    rawId, shortCode, ownerId, requestedAlias != null);
             return new ShortenUrlResponse(baseUrl + shortCode, longUrl);
         } catch (Exception e) {
             pathioMetrics.incrementUrlShortenFailed();
@@ -162,13 +166,14 @@ public class UrlShortenerService {
         log.info("Admin deleted shortCode={}", shortCode);
     }
 
-    private com.pt.pathio.auth.entity.User requireCurrentUser() {
-        org.springframework.security.core.Authentication auth =
-                org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+    private UUID requireCurrentUserId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null && auth.isAuthenticated()
-                && auth.getPrincipal() instanceof com.pt.pathio.auth.UserPrincipal principal) {
-            return userRepository.findById(principal.id())
+                && auth.getPrincipal() instanceof UserPrincipal principal) {
+            // Reject a stale principal whose user has since been deleted.
+            userLookup.findUser(principal.id())
                     .orElseThrow(() -> new AccessDeniedException("Authenticated user no longer exists"));
+            return principal.id();
         }
         // Defense in depth: shortening requires an authenticated user (HTTP layer returns 401 first).
         throw new AccessDeniedException("Authentication is required to shorten URLs");
