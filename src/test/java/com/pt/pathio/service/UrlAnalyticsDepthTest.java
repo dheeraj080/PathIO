@@ -156,8 +156,9 @@ class UrlAnalyticsDepthTest {
         // Total click count updated
         assertThat(urlRepository.findByShortCode(shortCode).orElseThrow().getClickCount()).isEqualTo(3);
 
-        // Daily rollup persisted
-        List<ClickRollupEntity> rollups = clickRollupRepository.findHistory(shortCode, today);
+        // Daily rollup persisted, scoped to the immutable URL id (DB-01)
+        Long urlId = urlRepository.findByShortCode(shortCode).orElseThrow().getId();
+        List<ClickRollupEntity> rollups = clickRollupRepository.findHistory(urlId, today);
         assertThat(rollups).hasSize(1);
         assertThat(rollups.get(0).getClicks()).isEqualTo(3);
 

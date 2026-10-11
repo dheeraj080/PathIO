@@ -69,14 +69,14 @@ public class UrlAnalyticsService {
     }
 
     public List<ClickHistoryPoint> getClickHistory(String shortCode, UUID userId, int days) {
-        requireOwnedUrl(shortCode, userId);
+        UrlEntity urlEntity = requireOwnedUrl(shortCode, userId);
 
         int window = normalizeDays(days);
         LocalDate today = LocalDate.now(java.time.ZoneOffset.UTC);
         LocalDate from = today.minusDays(window - 1L);
 
         Map<LocalDate, Long> countsByDate = new HashMap<>();
-        for (ClickRollupEntity row : clickRollupRepository.findHistory(shortCode, from)) {
+        for (ClickRollupEntity row : clickRollupRepository.findHistory(urlEntity.getId(), from)) {
             countsByDate.merge(row.getId().getClickDate(), row.getClicks(), Long::sum);
         }
 
@@ -88,16 +88,16 @@ public class UrlAnalyticsService {
     }
 
     public ClickBreakdownResponse getClickBreakdown(String shortCode, UUID userId, int days) {
-        requireOwnedUrl(shortCode, userId);
+        UrlEntity urlEntity = requireOwnedUrl(shortCode, userId);
 
         int window = normalizeDays(days);
         LocalDate from = LocalDate.now(java.time.ZoneOffset.UTC).minusDays(window - 1L);
 
         return new ClickBreakdownResponse(
                 toDimensionCounts(clickBreakdownRepository.findBreakdown(
-                        shortCode, UrlAnalyticsListener.DIMENSION_REFERRER, from)),
+                        urlEntity.getId(), UrlAnalyticsListener.DIMENSION_REFERRER, from)),
                 toDimensionCounts(clickBreakdownRepository.findBreakdown(
-                        shortCode, UrlAnalyticsListener.DIMENSION_DEVICE, from))
+                        urlEntity.getId(), UrlAnalyticsListener.DIMENSION_DEVICE, from))
         );
     }
 

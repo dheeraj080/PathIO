@@ -8,6 +8,7 @@ import com.pt.pathio.entity.UrlEntity;
 import com.pt.pathio.event.UrlClickedEvent;
 import com.pt.pathio.exception.ConflictException;
 import com.pt.pathio.exception.ResourceNotFoundException;
+import com.pt.pathio.listener.UrlAnalyticsListener;
 import com.pt.pathio.metrics.PathioMetrics;
 import com.pt.pathio.repository.UrlRepository;
 import lombok.RequiredArgsConstructor;
@@ -140,6 +141,7 @@ public class UrlShortenerService {
         // Evict the positive cache and plant a short-lived negative cache entry so a concurrent
         // redirect cannot resurrect the mapping from a stale cache read.
         redisTemplate.opsForValue().set(CACHE_PREFIX + shortCode, "", Duration.ofMinutes(5));
+        purgeAnalyticsKeys(shortCode);
         pathioMetrics.incrementUrlDeleted();
         log.info("Deleted shortCode={} userId={}", shortCode, userId);
     }
@@ -150,8 +152,25 @@ public class UrlShortenerService {
 
         urlRepository.delete(urlEntity);
         redisTemplate.opsForValue().set(CACHE_PREFIX + shortCode, "", Duration.ofMinutes(5));
+        purgeAnalyticsKeys(shortCode);
         pathioMetrics.incrementUrlDeleted();
         log.info("Admin deleted shortCode={}", shortCode);
+    }
+
+    /**
+     * Removes short-code-scoped analytics state so a later user re-registering the same alias can
+     * never inherit the previous owner's unique-visitor counts or unflushed pending totals. The
+     * persistent rollup/breakdown rows are removed by the {@code ON DELETE CASCADE} foreign key
+     * (V7); the Redis HLL key and the pending buffer are short-code-addressed and must be purged
+     * here. Best-effort: DB deletion is never rolled back by a Redis outage.
+     */
+    private void purgeAnalyticsKeys(String shortCode) {
+        try {
+            redisTemplate.delete(UNIQUE_PREFIX + shortCode);
+            redisTemplate.opsForHash().delete(UrlAnalyticsListener.PENDING_HASH, shortCode);
+        } catch (Exception e) {
+            log.warn("Failed to purge analytics keys for shortCode={}", shortCode, e);
+        }
     }
 
     private com.pt.pathio.auth.entity.User requireCurrentUser() {

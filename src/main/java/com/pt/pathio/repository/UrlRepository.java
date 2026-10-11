@@ -16,8 +16,10 @@ public interface UrlRepository extends JpaRepository<UrlEntity, Long> {
     Optional<UrlEntity> findByShortCode(String shortCode);
 
     @Modifying
-    @Query("UPDATE UrlEntity u SET u.clickCount = u.clickCount + :clicks WHERE u.shortCode = :shortCode")
-    int incrementClickCount(@Param("shortCode") String shortCode, @Param("clicks") long clicks);
+    @Query("UPDATE UrlEntity u SET u.clickCount = u.clickCount + :clicks WHERE u.id = :id AND u.shortCode = :shortCode")
+    int incrementClickCountById(@Param("id") Long id,
+                                @Param("shortCode") String shortCode,
+                                @Param("clicks") long clicks);
 
     Page<UrlEntity> findByUserIdOrderByCreatedAtDesc(UUID userId, Pageable pageable);
 

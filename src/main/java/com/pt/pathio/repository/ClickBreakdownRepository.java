@@ -12,25 +12,31 @@ import java.util.List;
 
 public interface ClickBreakdownRepository extends JpaRepository<ClickBreakdownEntity, ClickBreakdownId> {
 
+    /**
+     * Upserts a breakdown row for a URL identified by its immutable id, not its reusable short
+     * code (DB-01): rows are scoped to the owning URL so an alias reused by another user can never
+     * surface a previous owner's breakdown.
+     */
     @Modifying
     @Query(value = """
-            INSERT INTO click_breakdown (click_date, short_code, dimension, dimension_value, clicks)
-            VALUES (:clickDate, :shortCode, :dimension, :dimensionValue, :clicks)
+            INSERT INTO click_breakdown (click_date, short_code, url_id, dimension, dimension_value, clicks)
+            VALUES (:clickDate, :shortCode, :urlId, :dimension, :dimensionValue, :clicks)
             ON CONFLICT (click_date, short_code, dimension, dimension_value)
             DO UPDATE SET clicks = click_breakdown.clicks + EXCLUDED.clicks
             """, nativeQuery = true)
     int upsert(@Param("clickDate") LocalDate clickDate,
                @Param("shortCode") String shortCode,
+               @Param("urlId") Long urlId,
                @Param("dimension") String dimension,
                @Param("dimensionValue") String dimensionValue,
                @Param("clicks") long clicks);
 
     @Query("""
             SELECT c FROM ClickBreakdownEntity c
-            WHERE c.id.shortCode = :shortCode AND c.id.dimension = :dimension AND c.id.clickDate >= :from
+            WHERE c.urlId = :urlId AND c.id.dimension = :dimension AND c.id.clickDate >= :from
             ORDER BY c.clicks DESC
             """)
-    List<ClickBreakdownEntity> findBreakdown(@Param("shortCode") String shortCode,
+    List<ClickBreakdownEntity> findBreakdown(@Param("urlId") Long urlId,
                                              @Param("dimension") String dimension,
                                              @Param("from") LocalDate from);
 }

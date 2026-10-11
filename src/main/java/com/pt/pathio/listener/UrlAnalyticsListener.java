@@ -36,7 +36,7 @@ public class UrlAnalyticsListener {
     private final ClickBreakdownRepository clickBreakdownRepository;
     private final PathioMetrics pathioMetrics;
 
-    private static final String PENDING_HASH = "url:pending_clicks";
+    public static final String PENDING_HASH = "url:pending_clicks";
     private static final String PROCESSING_HASH = "url:pending_clicks:processing";
     private static final String PENDING_DAILY_PREFIX = "url:pending_daily:";
     private static final String PENDING_BREAKDOWN_PREFIX = "url:pending_breakdown:";
@@ -109,7 +109,11 @@ public class UrlAnalyticsListener {
             for (Map.Entry<Object, Object> entry : entries.entrySet()) {
                 String shortCode = (String) entry.getKey();
                 long clicks = Long.parseLong((String) entry.getValue());
-                urlRepository.incrementClickCount(shortCode, clicks);
+                // Resolve the owning URL at flush time. If it was deleted (or the alias was
+                // re-registered by another user), the buffered clicks are dropped: they belong
+                // to an URL that no longer exists and must never land on a reused alias (DB-01).
+                urlRepository.findByShortCode(shortCode).ifPresent(url ->
+                        urlRepository.incrementClickCountById(url.getId(), shortCode, clicks));
             }
 
             redisTemplate.delete(PROCESSING_HASH);
@@ -137,7 +141,10 @@ public class UrlAnalyticsListener {
                 }
                 Map<Object, Object> entries = redisTemplate.opsForHash().entries(processing);
                 for (Map.Entry<Object, Object> entry : entries.entrySet()) {
-                    clickRollupRepository.upsert(date, (String) entry.getKey(), Long.parseLong((String) entry.getValue()));
+                    String shortCode = (String) entry.getKey();
+                    long clicks = Long.parseLong((String) entry.getValue());
+                    urlRepository.findByShortCode(shortCode).ifPresent(url ->
+                            clickRollupRepository.upsert(date, shortCode, url.getId(), clicks));
                 }
                 redisTemplate.delete(processing);
             } catch (Exception e) {
@@ -167,8 +174,11 @@ public class UrlAnalyticsListener {
                     if (parts.length < 3) {
                         continue;
                     }
-                    clickBreakdownRepository.upsert(
-                            date, parts[0], parts[1], parts[2], Long.parseLong((String) entry.getValue()));
+                    String shortCode = parts[0];
+                    urlRepository.findByShortCode(shortCode).ifPresent(url ->
+                            clickBreakdownRepository.upsert(
+                                    date, shortCode, url.getId(), parts[1], parts[2],
+                                    Long.parseLong((String) entry.getValue())));
                 }
                 redisTemplate.delete(processing);
             } catch (Exception e) {
