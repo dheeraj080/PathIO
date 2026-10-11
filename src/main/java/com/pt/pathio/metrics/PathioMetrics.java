@@ -18,6 +18,7 @@ public class PathioMetrics {
     private final Counter urlShortenFailureCounter;
     private final Counter cacheHitCounter;
     private final Counter cacheMissCounter;
+    private final Counter cacheReadFailureCounter;
     private final Counter rateLimitBlockedCounter;
     private final Counter urlDeletedCounter;
     private final Counter urlUpdatedCounter;
@@ -43,6 +44,11 @@ public class PathioMetrics {
         this.cacheMissCounter = Counter.builder("pathio.url.redirect.cache")
                 .tag("result", "miss")
                 .description("Number of redirect queries falling back to PostgreSQL DB")
+                .register(registry);
+
+        this.cacheReadFailureCounter = Counter.builder("pathio.url.redirect.cache")
+                .tag("result", "read_failure")
+                .description("Number of redirect queries whose Redis read failed and fell back to PostgreSQL")
                 .register(registry);
 
         this.rateLimitBlockedCounter = Counter.builder("pathio.ratelimit.blocked")
@@ -82,6 +88,10 @@ public class PathioMetrics {
 
     public void incrementCacheMiss() {
         cacheMissCounter.increment();
+    }
+
+    public void incrementCacheReadFailure() {
+        cacheReadFailureCounter.increment();
     }
 
     public void incrementRateLimitBlocked() {

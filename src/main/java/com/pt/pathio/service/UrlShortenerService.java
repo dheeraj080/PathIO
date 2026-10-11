@@ -139,8 +139,9 @@ public class UrlShortenerService {
 
         urlRepository.delete(urlEntity);
         // Evict the positive cache and plant a short-lived negative cache entry so a concurrent
-        // redirect cannot resurrect the mapping from a stale cache read.
-        redisTemplate.opsForValue().set(CACHE_PREFIX + shortCode, "", Duration.ofMinutes(5));
+        // redirect cannot resurrect the mapping from a stale cache read. Best-effort: the DB delete
+        // is authoritative and must not fail because Redis is unavailable (RED-01).
+        writeNegativeCache(CACHE_PREFIX + shortCode, shortCode);
         purgeAnalyticsKeys(shortCode);
         pathioMetrics.incrementUrlDeleted();
         log.info("Deleted shortCode={} userId={}", shortCode, userId);
@@ -151,7 +152,7 @@ public class UrlShortenerService {
                 .orElseThrow(() -> new ResourceNotFoundException("URL not found for short code: " + shortCode));
 
         urlRepository.delete(urlEntity);
-        redisTemplate.opsForValue().set(CACHE_PREFIX + shortCode, "", Duration.ofMinutes(5));
+        writeNegativeCache(CACHE_PREFIX + shortCode, shortCode);
         purgeAnalyticsKeys(shortCode);
         pathioMetrics.incrementUrlDeleted();
         log.info("Admin deleted shortCode={}", shortCode);
@@ -205,6 +206,18 @@ public class UrlShortenerService {
         } catch (Exception e) {
             // Cache warming is best-effort; the redirect path repopulates on cache miss.
             log.warn("Failed to warm cache for shortCode={}", shortCode, e);
+        }
+    }
+
+    /**
+     * Best-effort negative-cache write. A Redis failure here must never mask the real
+     * {@code ResourceNotFoundException} the caller is about to raise (RED-01).
+     */
+    private void writeNegativeCache(String cacheKey, String shortCode) {
+        try {
+            redisTemplate.opsForValue().set(cacheKey, "", Duration.ofMinutes(5));
+        } catch (Exception e) {
+            log.warn("Failed to write negative cache for shortCode={}", shortCode, e);
         }
     }
 
@@ -287,14 +300,27 @@ public class UrlShortenerService {
             }
 
             String cacheKey = CACHE_PREFIX + shortCode;
-            String longUrl = redisTemplate.opsForValue().get(cacheKey);
-
-            if (longUrl != null && longUrl.isEmpty()) {
-                // Negative cache entry
-                throw new ResourceNotFoundException("URL not found for code: " + shortCode);
+            String longUrl = null;
+            boolean cacheReadFailed = false;
+            try {
+                longUrl = redisTemplate.opsForValue().get(cacheKey);
+            } catch (Exception e) {
+                // Redis is an accelerator, not the source of truth: a cache outage must not turn
+                // every redirect into a 500. Fall back to PostgreSQL and skip cache writes (RED-01).
+                cacheReadFailed = true;
+                pathioMetrics.incrementCacheReadFailure();
+                log.warn("Redis cache read failed for shortCode={}; serving from PostgreSQL", shortCode, e);
             }
 
-            if (longUrl != null) {
+            if (cacheReadFailed) {
+                pathioMetrics.incrementCacheMiss();
+                UrlEntity urlEntity = urlRepository.findByShortCode(shortCode)
+                        .orElseThrow(() -> new ResourceNotFoundException("URL not found for code: " + shortCode));
+                longUrl = urlEntity.getLongUrl();
+            } else if (longUrl != null && longUrl.isEmpty()) {
+                // Negative cache entry
+                throw new ResourceNotFoundException("URL not found for code: " + shortCode);
+            } else if (longUrl != null) {
                 pathioMetrics.incrementCacheHit();
             } else {
                 // Cache miss -> Fetch from PostgreSQL
@@ -302,12 +328,12 @@ public class UrlShortenerService {
                 UrlEntity urlEntity = urlRepository.findByShortCode(shortCode).orElse(null);
 
                 if (urlEntity == null) {
-                    redisTemplate.opsForValue().set(cacheKey, "", Duration.ofMinutes(5));
+                    writeNegativeCache(cacheKey, shortCode);
                     throw new ResourceNotFoundException("URL not found for code: " + shortCode);
                 }
 
                 longUrl = urlEntity.getLongUrl();
-                redisTemplate.opsForValue().set(cacheKey, longUrl, Duration.ofDays(7));
+                warmCache(shortCode, longUrl);
             }
 
             recordClick(shortCode, clientIp, userAgent, referrer);

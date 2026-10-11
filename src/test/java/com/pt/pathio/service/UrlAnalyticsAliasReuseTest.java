@@ -131,6 +131,9 @@ class UrlAnalyticsAliasReuseTest {
         redisTemplate.opsForHash().increment("url:pending_daily:" + today, alias, 2);
         redisTemplate.opsForHash().increment("url:pending_breakdown:" + today, alias + "|REFERRER|news.example.com", 2);
         redisTemplate.opsForHash().increment("url:pending_breakdown:" + today, alias + "|DEVICE|desktop", 2);
+        // Register the pending day in the SET index the flush job reads instead of KEYS (RED-02).
+        redisTemplate.opsForSet().add(UrlAnalyticsListener.PENDING_DAILY_INDEX, today.toString());
+        redisTemplate.opsForSet().add(UrlAnalyticsListener.PENDING_BREAKDOWN_INDEX, today.toString());
         redisTemplate.opsForHyperLogLog().add("url:unique:" + alias, "visitor-a", "visitor-b");
 
         urlAnalyticsListener.flushClickCountsToDb();

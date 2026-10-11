@@ -145,6 +145,9 @@ class UrlAnalyticsDepthTest {
                 shortCode + "|REFERRER|news.example.com", 2);
         redisTemplate.opsForHash().increment("url:pending_breakdown:" + today,
                 shortCode + "|DEVICE|desktop", 3);
+        // Register the pending day in the SET index the flush job reads instead of KEYS (RED-02).
+        redisTemplate.opsForSet().add(UrlAnalyticsListener.PENDING_DAILY_INDEX, today.toString());
+        redisTemplate.opsForSet().add(UrlAnalyticsListener.PENDING_BREAKDOWN_INDEX, today.toString());
 
         urlAnalyticsListener.flushClickCountsToDb();
 

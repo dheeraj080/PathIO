@@ -38,6 +38,9 @@ public class UrlAnalyticsListener {
 
     public static final String PENDING_HASH = "url:pending_clicks";
     private static final String PROCESSING_HASH = "url:pending_clicks:processing";
+
+    public static final String PENDING_DAILY_INDEX = "url:pending_daily_days";
+    public static final String PENDING_BREAKDOWN_INDEX = "url:pending_breakdown_days";
     private static final String PENDING_DAILY_PREFIX = "url:pending_daily:";
     private static final String PENDING_BREAKDOWN_PREFIX = "url:pending_breakdown:";
     private static final String PROCESSING_SUFFIX = ":processing";
@@ -46,14 +49,27 @@ public class UrlAnalyticsListener {
     public static final String DIMENSION_REFERRER = "REFERRER";
     public static final String DIMENSION_DEVICE = "DEVICE";
 
+    /**
+     * Atomic pending-to-processing hand-off (RED-03). A single Lua script guarantees exactly one
+     * instance owns the {@code processing} key: if the processing key already exists (a live node
+     * mid-flush, or a crashed node's leftover batch that the retry-first path will pick up) the
+     * script reports 'not swapped' instead of raising a RENAME error, so concurrent flushers never
+     * crash one another and a stuck batch is never orphaned.
+     */
     private static final String DRAIN_LUA = """
+            if redis.call('EXISTS', KEYS[2]) == 1 then
+                return 0
+            end
             if redis.call('EXISTS', KEYS[1]) == 1 then
                 redis.call('RENAME', KEYS[1], KEYS[2])
                 return 1
-            else
-                return 0
             end
+            return 0
             """;
+
+    private static final Duration PENDING_KEY_TTL = Duration.ofDays(3);
+    /** Slightly longer than the pending-key TTL so the index outlives the keys it references. */
+    private static final Duration PENDING_INDEX_TTL = Duration.ofDays(4);
 
     private final DefaultRedisScript<Long> drainScript =
             new DefaultRedisScript<>(DRAIN_LUA, Long.class);
@@ -70,7 +86,8 @@ public class UrlAnalyticsListener {
 
             String dailyKey = PENDING_DAILY_PREFIX + date;
             redisTemplate.opsForHash().increment(dailyKey, event.shortCode(), 1);
-            redisTemplate.expire(dailyKey, Duration.ofDays(3));
+            redisTemplate.expire(dailyKey, PENDING_KEY_TTL);
+            indexDay(PENDING_DAILY_INDEX, date);
 
             incrementBreakdown(date, event.shortCode(), DIMENSION_REFERRER, normalizeReferrer(event.referrer()));
             incrementBreakdown(date, event.shortCode(), DIMENSION_DEVICE, deviceType(event.userAgent()));
@@ -83,7 +100,18 @@ public class UrlAnalyticsListener {
         String key = PENDING_BREAKDOWN_PREFIX + date;
         String field = shortCode + BREAKDOWN_SEPARATOR + dimension + BREAKDOWN_SEPARATOR + value;
         redisTemplate.opsForHash().increment(key, field, 1);
-        redisTemplate.expire(key, Duration.ofDays(3));
+        redisTemplate.expire(key, PENDING_KEY_TTL);
+        indexDay(PENDING_BREAKDOWN_INDEX, date);
+    }
+
+    /**
+     * Registers a pending day in a small SET index. The flush job reads the index (SMEMBERS) to
+     * discover which daily/breakdown hashes exist instead of issuing the blocking KEYS command,
+     * which is O(keyspace) and unsupported in clustered Redis (RED-02).
+     */
+    private void indexDay(String indexSet, LocalDate date) {
+        redisTemplate.opsForSet().add(indexSet, date.toString());
+        redisTemplate.expire(indexSet, PENDING_INDEX_TTL);
     }
 
     @Scheduled(fixedRate = 30000)
@@ -94,13 +122,20 @@ public class UrlAnalyticsListener {
         flushBreakdowns();
     }
 
+    /**
+     * Retry-first, drain-on-empty hand-off. The {@code processing} key may already hold a batch
+     * from a crashed node or a previous cycle that failed against PostgreSQL; that batch is
+     * processed before any new pending data is promoted, so a transient DB outage never wedges
+     * the pipeline permanently (RED-03).
+     */
     private void flushTotalCounts() {
         try {
-            if (!drain(PENDING_HASH, PROCESSING_HASH)) {
+            Map<Object, Object> entries = redisTemplate.opsForHash().entries(PROCESSING_HASH);
+            if (entries.isEmpty() && !drain(PENDING_HASH, PROCESSING_HASH)) {
                 return;
             }
 
-            Map<Object, Object> entries = redisTemplate.opsForHash().entries(PROCESSING_HASH);
+            entries = redisTemplate.opsForHash().entries(PROCESSING_HASH);
             if (entries.isEmpty()) {
                 redisTemplate.delete(PROCESSING_HASH);
                 return;
@@ -125,71 +160,96 @@ public class UrlAnalyticsListener {
     }
 
     private void flushDailyRollups() {
-        Set<String> keys = redisTemplate.keys(PENDING_DAILY_PREFIX + "*");
-        if (keys == null) {
+        flushPendingCounts(PENDING_DAILY_INDEX, PENDING_DAILY_PREFIX, this::flushDailyRollupEntry);
+    }
+
+    private void flushBreakdowns() {
+        flushPendingCounts(PENDING_BREAKDOWN_INDEX, PENDING_BREAKDOWN_PREFIX, this::flushBreakdownEntry);
+    }
+
+    /**
+     * Iterates the day-index (never KEYS) and drains pending hashes day by day, applying the same
+     * retry-first hand-off as {@link #flushTotalCounts()} so leftovers, concurrent instances and
+     * expired keys are all handled deterministically.
+     */
+    private void flushPendingCounts(String indexSet, String prefix, PendingHashProcessor processor) {
+        Set<String> days = redisTemplate.opsForSet().members(indexSet);
+        if (days == null) {
             return;
         }
-        for (String key : keys) {
-            if (key.endsWith(PROCESSING_SUFFIX)) {
-                continue;
-            }
+        for (String day : days) {
             try {
-                LocalDate date = LocalDate.parse(key.substring(PENDING_DAILY_PREFIX.length()));
+                LocalDate date = LocalDate.parse(day);
+                String key = prefix + day;
                 String processing = key + PROCESSING_SUFFIX;
-                if (!drain(key, processing)) {
-                    continue;
-                }
+
                 Map<Object, Object> entries = redisTemplate.opsForHash().entries(processing);
-                for (Map.Entry<Object, Object> entry : entries.entrySet()) {
-                    String shortCode = (String) entry.getKey();
-                    long clicks = Long.parseLong((String) entry.getValue());
-                    urlRepository.findByShortCode(shortCode).ifPresent(url ->
-                            clickRollupRepository.upsert(date, shortCode, url.getId(), clicks));
+                if (entries.isEmpty()) {
+                    if (!drain(key, processing)) {
+                        // Did not win the hand-off: another live instance then owns 'processing'
+                        // and will unindex it, so leave the index alone. If nothing exists at all
+                        // (expired source) drop the stale index entry.
+                        if (redisTemplate.opsForHash().size(processing) == 0L) {
+                            unindexDay(indexSet, day);
+                        }
+                        continue;
+                    }
+                    entries = redisTemplate.opsForHash().entries(processing);
+                    if (entries.isEmpty()) {
+                        redisTemplate.delete(processing);
+                        unindexDay(indexSet, day);
+                        continue;
+                    }
                 }
+
+                processor.process(date, entries);
                 redisTemplate.delete(processing);
+                unindexDay(indexSet, day);
             } catch (Exception e) {
-                log.error("Error flushing daily rollup for key {}", key, e);
+                log.error("Error flushing pending hash {} day={}", prefix, day, e);
             }
         }
     }
 
-    private void flushBreakdowns() {
-        Set<String> keys = redisTemplate.keys(PENDING_BREAKDOWN_PREFIX + "*");
-        if (keys == null) {
-            return;
+    private void unindexDay(String indexSet, String day) {
+        try {
+            redisTemplate.opsForSet().remove(indexSet, day);
+        } catch (Exception e) {
+            log.warn("Failed to remove day {} from pending index {}", day, indexSet, e);
         }
-        for (String key : keys) {
-            if (key.endsWith(PROCESSING_SUFFIX)) {
+    }
+
+    private void flushDailyRollupEntry(LocalDate date, Map<Object, Object> entries) {
+        for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+            String shortCode = (String) entry.getKey();
+            long clicks = Long.parseLong((String) entry.getValue());
+            urlRepository.findByShortCode(shortCode).ifPresent(url ->
+                    clickRollupRepository.upsert(date, shortCode, url.getId(), clicks));
+        }
+    }
+
+    private void flushBreakdownEntry(LocalDate date, Map<Object, Object> entries) {
+        for (Map.Entry<Object, Object> entry : entries.entrySet()) {
+            String[] parts = ((String) entry.getKey()).split(Pattern.quote(BREAKDOWN_SEPARATOR), 3);
+            if (parts.length < 3) {
                 continue;
             }
-            try {
-                LocalDate date = LocalDate.parse(key.substring(PENDING_BREAKDOWN_PREFIX.length()));
-                String processing = key + PROCESSING_SUFFIX;
-                if (!drain(key, processing)) {
-                    continue;
-                }
-                Map<Object, Object> entries = redisTemplate.opsForHash().entries(processing);
-                for (Map.Entry<Object, Object> entry : entries.entrySet()) {
-                    String[] parts = ((String) entry.getKey()).split(Pattern.quote(BREAKDOWN_SEPARATOR), 3);
-                    if (parts.length < 3) {
-                        continue;
-                    }
-                    String shortCode = parts[0];
-                    urlRepository.findByShortCode(shortCode).ifPresent(url ->
-                            clickBreakdownRepository.upsert(
-                                    date, shortCode, url.getId(), parts[1], parts[2],
-                                    Long.parseLong((String) entry.getValue())));
-                }
-                redisTemplate.delete(processing);
-            } catch (Exception e) {
-                log.error("Error flushing breakdown for key {}", key, e);
-            }
+            String shortCode = parts[0];
+            urlRepository.findByShortCode(shortCode).ifPresent(url ->
+                    clickBreakdownRepository.upsert(
+                            date, shortCode, url.getId(), parts[1], parts[2],
+                            Long.parseLong((String) entry.getValue())));
         }
     }
 
     private boolean drain(String key, String processing) {
         Long swapped = redisTemplate.execute(drainScript, List.of(key, processing));
         return swapped != null && swapped != 0;
+    }
+
+    @FunctionalInterface
+    private interface PendingHashProcessor {
+        void process(LocalDate date, Map<Object, Object> entries);
     }
 
     private String normalizeReferrer(String referrer) {
