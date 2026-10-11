@@ -26,12 +26,12 @@ for users and a dedicated admin console.
 | Layer | Technology |
 |---|---|
 | Backend | Java 27, Spring Boot 4.1.1, Spring Security + OAuth2 client, Spring Data JPA, WebMVC |
-| Data | PostgreSQL 16, Redis 7, Flyway (V1–V5) |
-| Frontend | React 18, Vite 5, TypeScript, Tailwind CSS, TanStack Query, React Router 6, Recharts |
+| Data | PostgreSQL 16, Redis 7, Flyway (V1–V8) |
+| web | React 18, Vite 5, TypeScript, Tailwind CSS, TanStack Query, React Router 6, Recharts |
 | Security | JWT (HMAC-SHA512), BCrypt, Bucket4j rate limiting, SSRF/URL safety checks |
 | Observability | Micrometer + Prometheus, OpenTelemetry/OTLP tracing, Actuator |
 | Infra | Docker Compose (app services + Prometheus/Grafana/Jaeger) |
-| Tests | JUnit 5 + MockMvc (backend), Vitest + Testing Library + MSW (frontend) |
+| Tests | JUnit 5 + MockMvc (backend), Vitest + Testing Library + MSW (web) |
 
 ---
 
@@ -41,7 +41,7 @@ for users and a dedicated admin console.
 pathio/
 ├── pom.xml                  # Maven build (backend)
 ├── mvnw / mvnw.cmd          # Maven wrapper
-├── package.json             # Convenience scripts delegating to frontend/
+├── package.json             # Convenience scripts delegating to web/
 ├── .env.example             # Backend environment template
 ├── docker-compose.yml       # PostgreSQL + Redis
 ├── docker-compose.observability.yml  # Prometheus + Grafana + Jaeger
@@ -55,9 +55,9 @@ pathio/
 │   │   ├── entity/ repository/  dto/  listener/  event/  metrics/  filter/
 │   └── resources/
 │       ├── application.properties
-│       └── db/migration/    # Flyway V1–V5
+│       └── db/migration/    # Flyway V1–V8
 ├── src/test/                # Backend tests
-├── frontend/                # React SPA  (see frontend/README.md)
+├── web/                # React SPA  (see web/README.md)
 └── internal/                # Local working docs (git-ignored)
 ```
 
@@ -74,10 +74,10 @@ pathio/
 
 ## Getting started
 
-### Quick start (frontend against a mock API — no backend required)
+### Quick start (web against a mock API — no backend required)
 
 ```bash
-cd frontend
+cd web
 npm install
 npm run demo          # mock API on :8081 + Vite on :5173, opens the browser
 ```
@@ -95,23 +95,23 @@ docker compose up -d              # PostgreSQL :5432 + Redis :6379
 cp .env.example .env              # fill in OAuth credentials and admin account
 ./mvnw spring-boot:run            # http://localhost:8080
 
-# 3. Frontend
-cd frontend
+# 3. web
+cd web
 npm install
 npm run dev                       # http://localhost:5173
 ```
 
-> The frontend calls `http://localhost:8080` by default. To use the mock API instead, set
-> `VITE_API_BASE_URL=http://localhost:8081` in `frontend/.env`.
+> The web calls `http://localhost:8080` by default. To use the mock API instead, set
+> `VITE_API_BASE_URL=http://localhost:8081` in `web/.env`.
 
 ### Root convenience scripts
 
 ```bash
-npm run demo         # frontend:install + mock API + Vite, opens browser
-npm run dev          # Vite dev server only (frontend/)
+npm run demo         # web:install + mock API + Vite, opens browser
+npm run dev          # Vite dev server only (web/)
 npm run mock         # Hono mock API only (:8081)
 npm run build        # type-check + production build
-npm run test         # frontend tests
+npm run test         # web tests
 ```
 
 ---
@@ -128,7 +128,7 @@ environment variables / JVM properties if you set them.
 | `DB_HOST` / `DB_PORT` / `DB_NAME` / `DB_USER` / `DB_PASSWORD` | `localhost` / `5432` / `pathio_db` / `postgres` / `secretpassword` | PostgreSQL connection |
 | `DB_POOL_MAX` / `DB_POOL_MIN_IDLE` | `20` / `5` | HikariCP pool tuning |
 | `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` | `localhost` / `6379` / *(empty)* | Redis connection |
-| `JWT_SECRET` | fixed dev value | HMAC secret — **must be ≥ 64 chars**, override in prod |
+| `JWT_SECRET` | *(required — no default)* | HMAC secret — **must be ≥ 64 chars**. Startup is refused if missing, too short, or a known placeholder. Generate with `openssl rand -base64 48` |
 | `JWT_ACCESS_TTL_SECONDS` / `JWT_REFRESH_TTL_SECONDS` | `3600` / `2592000` | Access token 1 h, refresh token 30 d |
 | `APP_SHORTENER_DOMAIN` / `APP_SHORTENER_SERVICE_HOST` | `https://path.io/` / `path.io` | Short-link base URL + self-domain guard |
 | `APP_CORS_ALLOWED_ORIGINS` | `localhost:5173,3000,3001` | CORS allow-list (also drives the OAuth popup origin filter) |
@@ -136,6 +136,28 @@ environment variables / JVM properties if you set them.
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | dummy values | GitHub OAuth app |
 | `TRACING_SAMPLING_PROBABILITY` | `1.0` | OTLP trace sample rate |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318/v1/traces` | OpenTelemetry collector endpoint |
+
+#### JWT signing secret (`JWT_SECRET`)
+
+`JWT_SECRET` is **required** for non-dev startup and has **no built-in default**. The application
+refuses to start when the secret is missing, blank, shorter than 64 characters, or equal to a known
+insecure/placeholder value — including the legacy key that used to ship with the repository — so a
+publicly-known value can never silently sign tokens. Generate a fresh random secret:
+
+```bash
+openssl rand -base64 48
+```
+
+PowerShell alternative:
+
+```powershell
+[Convert]::ToBase64String([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(48))
+```
+
+For **local development only**, you may skip setting the secret by explicitly running with
+`SPRING_PROFILES_ACTIVE=dev` and `SECURITY_JWT_DEV_FALLBACK=true`. This deliberately activates a
+documented dev-only fallback secret. It is never active for any non-dev environment: without the
+combined `dev` profile + flag, startup still fails if no valid secret is provided.
 
 ### Admin account
 
@@ -148,7 +170,7 @@ startup (`DataInitializer`) when these are present:
 Seeded roles are `ROLE_USER` and `ROLE_ADMIN`. Only this account may use the email/password login
 form (everyone else is `403 OAUTH_ONLY`).
 
-### Frontend environment (`frontend/.env`)
+### web environment (`web/.env`)
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -168,7 +190,7 @@ form (everyone else is `403 OAUTH_ONLY`).
   on logout.
 - All API calls are made with `credentials: 'include'` and a `Bearer` access token; a single-flight
   `401 → refresh → retry` cycle keeps sessions alive.
-- The frontend redirects anonymous users to `/login?redirect=<path>` and returns them after sign-in.
+- The web redirects anonymous users to `/login?redirect=<path>` and returns them after sign-in.
 
 ---
 
@@ -272,9 +294,9 @@ tracing sends OTLP to Jaeger (`:4318`) with `traceId`/`spanId` in the logs.
 
 ---
 
-## Frontend
+## web
 
-The frontend is a multi-route React SPA. See **`frontend/README.md`** for the full build plan,
+The web is a multi-route React SPA. See **`web/README.md`** for the full build plan,
 mock/demo instructions, and project structure.
 
 | Route | Page | Access |
@@ -296,13 +318,15 @@ full contract with real cookies and a working OAuth popup.
 
 ## Testing
 
-**Backend** (`./mvnw test`, 8 classes): ownership & analytics, link management (aliases, update,
-delete for owner/non-owner), analytics depth (HLL, rollups, breakdowns), method security, OAuth
-popup security, and Phase-3 auth policy (anonymous shorten → `401`, non-admin login → `403 OAUTH_ONLY`,
-admin login → `200`, missing endpoint → `404`).
+**Backend** (`./mvnw test`, 19 classes): ownership & analytics, link management (aliases, update,
+delete for owner/non-owner), analytics depth (HLL, rollups, breakdowns) plus alias-reuse binding,
+method security, OAuth popup, refresh-family rotation, JWT/cookie services, analytics flush, ID
+generation/Feistel units, redirect cache fallback, and the auth policy (anonymous shorten → `401`,
+non-admin login → `403 OAUTH_ONLY`, admin login → `200`, missing endpoint → `404`).
 
-**Frontend** (`cd frontend && npm test`, 16 tests): OAuth popup helper, API client refresh/retry,
-shorten form, links table pagination, analytics panel, admin user management.
+**web** (`cd web && npm test`, 34 tests): OAuth popup helper, API client refresh/retry and session
+teardown on silent-refresh failure, shorten forms, links table pagination, analytics panel, admin
+user management, auth flows.
 
 ---
 
@@ -317,12 +341,15 @@ Flyway migrations run automatically on startup (`ddl-auto=validate`):
 | `V3` | `urls.user_id` FK → `users` (ownership) |
 | `V4` | `short_code` widened to 32 chars (custom aliases) |
 | `V5` | `click_rollup` + `click_breakdown` analytics tables |
+| `V6` | `refresh_token_family` — token families for rotation & reuse-revocation |
+| `V7` | analytics bound to immutable `urls.id` (FK `ON DELETE CASCADE`) |
+| `V8` | `id_generator` ceiling aligned to the 40-bit ID space (`chk_40bit_limit`) |
 
 ---
 
 ## Troubleshooting
 
-- **Frontend shows "API offline" / CORS errors:** the API base URL must match a CORS allow-list entry
+- **web shows "API offline" / CORS errors:** the API base URL must match a CORS allow-list entry
   (`APP_CORS_ALLOWED_ORIGINS`), e.g. `http://localhost:5173`.
 - **OAuth sign-in bounces or never resolves:** add your app origin to `APP_CORS_ALLOWED_ORIGINS`
   (it also gates the popup `postMessage`), and confirm the provider client IDs/secrets.

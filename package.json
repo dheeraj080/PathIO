@@ -1,14 +1,14 @@
 {
   "name": "pathio-workspace",
   "private": true,
-  "description": "Convenience scripts that delegate to the frontend workspace. The backend is a Maven project (see pom.xml).",
+  "description": "Convenience scripts that delegate to the web workspace. The backend is a Maven project (see pom.xml).",
   "scripts": {
-    "frontend:install": "npm --prefix frontend install",
-    "dev": "npm --prefix frontend run dev",
-    "mock": "npm --prefix frontend run mock",
-    "demo": "npm --prefix frontend run demo",
-    "build": "npm --prefix frontend run build",
-    "test": "npm --prefix frontend run test",
-    "test:watch": "npm --prefix frontend run test:watch"
+    "web:install": "npm --prefix web install",
+    "dev": "npm --prefix web run dev",
+    "mock": "npm --prefix web run mock",
+    "demo": "npm --prefix web run demo",
+    "build": "npm --prefix web run build",
+    "test": "npm --prefix web run test",
+    "test:watch": "npm --prefix web run test:watch"
   }
 }

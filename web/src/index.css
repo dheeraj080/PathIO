@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CSS custom properties (semantic tokens) — light-first, expanded by Tailwind */
+:root {
+  --bg-page: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-muted: #f1f5f9;
+  --border: #e2e8f0;
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+  --accent-primary: #6366f1;
+  --accent-primary-hover: #4f46e5;
+  --radius: 0.5rem;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --focus-ring: 2px solid var(--accent-primary);
+}
+
+.dark {
+  --bg-page: #0f172a;
+  --bg-surface: #1e293b;
+  --bg-muted: #334155;
+  --border: #334155;
+  --text-primary: #f1f5f9;
+  --text-muted: #94a3b8;
+  --accent-primary: #a5b4fc;
+  --accent-primary-hover: #818cf8;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --focus-ring: 2px solid var(--accent-primary);
+}
+
+/* Apply base variables via Tailwind existing classes — do not override existing utilities */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-900 dark:text-slate-100;
+  }
+
+  /* Focus ring — visible, consistent across all interactive elements */
+  :focus-visible {
+    @apply outline-none;
+    /* Fallback outline for browsers that don't support :focus-visible well */
+    outline: var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  /* Reduce motion — global switch */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
