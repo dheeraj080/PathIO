@@ -13,7 +13,10 @@ import {
   findUserById,
   getClickBreakdown,
   getClickHistory,
+  getGlobalBreakdown,
+  getGlobalHistory,
   getOverview,
+  getTopLinks,
   getUrlAnalytics,
   listAllLinks,
   listApiKeys,
@@ -319,6 +322,36 @@ export const handlers = [
     try {
       const user = requireUser(request)
       return HttpResponse.json(getOverview(user.id))
+    } catch (error) {
+      return errorResponse(error)
+    }
+  }),
+
+  http.get(u('/api/v1/analytics/history'), ({ request }) => {
+    try {
+      const user = requireUser(request)
+      const days = Number.parseInt(new URL(request.url).searchParams.get('days') ?? '30', 10)
+      return HttpResponse.json(getGlobalHistory(user.id, days))
+    } catch (error) {
+      return errorResponse(error)
+    }
+  }),
+
+  http.get(u('/api/v1/analytics/breakdown'), ({ request }) => {
+    try {
+      const user = requireUser(request)
+      const days = Number.parseInt(new URL(request.url).searchParams.get('days') ?? '30', 10)
+      return HttpResponse.json(getGlobalBreakdown(user.id, days))
+    } catch (error) {
+      return errorResponse(error)
+    }
+  }),
+
+  http.get(u('/api/v1/analytics/top-links'), ({ request }) => {
+    try {
+      const user = requireUser(request)
+      const limit = Number.parseInt(new URL(request.url).searchParams.get('limit') ?? '5', 10)
+      return HttpResponse.json(getTopLinks(user.id, limit))
     } catch (error) {
       return errorResponse(error)
     }

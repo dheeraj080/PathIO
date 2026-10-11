@@ -90,6 +90,13 @@ export interface ClickBreakdownResponse {
   devices: DimensionCount[]
 }
 
+export interface TopLinkResponse {
+  shortCode: string
+  shortUrl: string
+  longUrl: string
+  clickCount: number
+}
+
 export interface HealthResponse {
   status: string
 }

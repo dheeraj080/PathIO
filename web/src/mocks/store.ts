@@ -5,6 +5,7 @@ import type {
   ClickHistoryPoint,
   DimensionCount,
   Page,
+  TopLinkResponse,
   UrlAnalyticsResponse,
   UserDTO,
   UserUrlResponse,
@@ -651,6 +652,60 @@ export function getClickBreakdown(
     referrers: topCounts(clicks.map((click) => click.referrer)),
     devices: topCounts(clicks.map((click) => click.device)),
   }
+}
+
+export function getGlobalHistory(ownerId: string, days: number): ClickHistoryPoint[] {
+  const bounded = Math.min(Math.max(days, 1), 365)
+  const ownedCodes = new Set(
+    state.links.filter((link) => link.ownerId === ownerId).map((link) => link.shortCode),
+  )
+
+  const buckets = new Map<string, number>()
+  const now = new Date()
+  for (let offset = bounded - 1; offset >= 0; offset -= 1) {
+    const date = new Date(now)
+    date.setUTCHours(0, 0, 0, 0)
+    date.setUTCDate(date.getUTCDate() - offset)
+    buckets.set(date.toISOString().slice(0, 10), 0)
+  }
+  for (const click of state.clicks) {
+    if (!ownedCodes.has(click.shortCode)) continue
+    const key = click.at.slice(0, 10)
+    if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1)
+  }
+  return [...buckets.entries()].map(([date, count]) => ({ date, clicks: count }))
+}
+
+export function getGlobalBreakdown(ownerId: string, days: number): ClickBreakdownResponse {
+  const bounded = Math.min(Math.max(days, 1), 365)
+  const since = new Date()
+  since.setUTCHours(0, 0, 0, 0)
+  since.setUTCDate(since.getUTCDate() - (bounded - 1))
+
+  const ownedCodes = new Set(
+    state.links.filter((link) => link.ownerId === ownerId).map((link) => link.shortCode),
+  )
+  const clicks = state.clicks.filter(
+    (click) => ownedCodes.has(click.shortCode) && new Date(click.at) >= since,
+  )
+  return {
+    referrers: topCounts(clicks.map((click) => click.referrer)),
+    devices: topCounts(clicks.map((click) => click.device)),
+  }
+}
+
+export function getTopLinks(ownerId: string, limit: number): TopLinkResponse[] {
+  const bounded = Math.min(Math.max(limit, 1), 20)
+  return [...state.links]
+    .filter((link) => link.ownerId === ownerId)
+    .sort((a, b) => b.clickCount - a.clickCount || a.shortCode.localeCompare(b.shortCode))
+    .slice(0, bounded)
+    .map((link) => ({
+      shortCode: link.shortCode,
+      shortUrl: `${MOCK_SHORT_DOMAIN}${link.shortCode}`,
+      longUrl: link.longUrl,
+      clickCount: link.clickCount,
+    }))
 }
 
 export function userAgentForDevice(device: string): string {
