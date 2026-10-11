@@ -62,7 +62,7 @@ export function CopyButton({
           <Copy className="h-4 w-4" />
         </>
       )}
-      {copied ? 'Copied' : visibleLabel ?? label}
+      {copied ? <span>Copied</span> : null}
     </Button>
   )
 }
