@@ -1,2 +1,10 @@
 /mvnw text eol=lf
 *.cmd text eol=crlf
+
+# Keep build/CI/config files LF-only so line continuations survive on every platform
+# (notably the Dockerfile, which is built on Linux even when checked out on Windows).
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+.github/** text eol=lf
+*.yml text eol=lf
+*.properties text eol=lf

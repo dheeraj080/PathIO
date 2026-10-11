@@ -1,0 +1,20 @@
+# Keep the Docker build context minimal - only the backend build inputs are needed.
+target/
+web/
+internal/
+docker/
+.git/
+.github/
+.idea/
+.vscode/
+*.iml
+
+# Local secrets and machine-specific files
+.env
+.env.*
+!.env.example
+
+# Docs and compose files are not part of the image build
+README.md
+HELP.md
+docker-compose*.yml

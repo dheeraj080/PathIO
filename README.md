@@ -7,10 +7,10 @@ for users and a dedicated admin console.
 ```
 ┌───────────────────────────┐        ┌─────────────────────────────────────────────┐
 │  React SPA (Vite :5173)   │  HTTPS │  Spring Boot API (:8080)                    │
-│  Landing · Login · Signup │ ─────► │  Security → Controllers → Services          │
+│  Landing · Login · Signup │ ─────► │  shared · auth · link · analytics           │
 │  Dashboard · Admin · …    │  JSON  │       │                  │                  │
 └───────────────────────────┘        │  PostgreSQL 16     Redis 7                 │
-   Google/GitHub OAuth popup          │  (Flyway V1–V9)    (cache · HLL · buffers) │
+   Google/GitHub OAuth popup          │  (Flyway V1–V10)   (cache · HLL · buffers) │
         └── postMessage ─────────────►└─────────────────────────────────────────────┘
 ```
 
@@ -26,11 +26,11 @@ for users and a dedicated admin console.
 | Layer | Technology |
 |---|---|
 | Backend | Java 27, Spring Boot 4.1.1, Spring Security + OAuth2 client, Spring Data JPA, WebMVC |
-| Data | PostgreSQL 16, Redis 7, Flyway (V1–V9) |
+| Data | PostgreSQL 16, Redis 7, Flyway (V1–V10) |
 | web | React 18, Vite 5, TypeScript, Tailwind CSS, TanStack Query, React Router 6, Recharts |
 | Security | JWT (HMAC-SHA512), BCrypt, Bucket4j rate limiting, SSRF/URL safety checks |
 | Observability | Micrometer + Prometheus, OpenTelemetry/OTLP tracing, Actuator |
-| Infra | Docker Compose (app services + Prometheus/Grafana/Jaeger) |
+| Infra | Multi-stage Docker image, Docker Compose (deps + Prometheus/Grafana/Jaeger), GitHub Actions CI |
 | Tests | JUnit 5 + MockMvc (backend), Vitest + Testing Library + MSW (web) |
 
 ---
@@ -42,22 +42,25 @@ pathio/
 ├── pom.xml                  # Maven build (backend)
 ├── mvnw / mvnw.cmd          # Maven wrapper
 ├── package.json             # Convenience scripts delegating to web/
+├── Dockerfile               # Multi-stage backend image (JDK build → JRE runtime)
+├── .dockerignore
+├── .github/workflows/ci.yml # CI: backend tests, web build/test, image build
 ├── .env.example             # Backend environment template
 ├── docker-compose.yml       # PostgreSQL + Redis
 ├── docker-compose.observability.yml  # Prometheus + Grafana + Jaeger
 ├── docker/                  # Prometheus scrape config
-├── src/main/                # Spring Boot backend
+├── src/main/                # Spring Boot backend (modular monolith)
 │   ├── java/com/pt/pathio/
-│   │   ├── controller/      # URL, analytics, admin REST endpoints
-│   │   ├── config/          # Security, Web (CORS/rate limit), cache, dev profile
-│   │   ├── service/         # Shortener, analytics, rate limiting, IDs
-│   │   ├── auth/            # OAuth handlers, JWT, user management
-│   │   ├── entity/ repository/  dto/  listener/  event/  metrics/  filter/
+│   │   ├── shared/          # config, web, error, metrics, ratelimit, observability
+│   │   ├── auth/            # users, roles, JWT, API keys, OAuth (api/ = published contract)
+│   │   ├── link/            # shortening, redirects, link CRUD (api/ = contract + events)
+│   │   └── analytics/       # click rollups, breakdowns, unique counts
 │   └── resources/
 │       ├── application.properties
-│       └── db/migration/    # Flyway V1–V9
-├── src/test/                # Backend tests
-├── web/                # React SPA  (see web/README.md)
+│       ├── application-dev.properties   # dev-only overrides (enables Swagger)
+│       └── db/migration/    # Flyway V1–V10
+├── src/test/                # Backend tests (incl. ArchUnit boundary rules)
+├── web/                     # React SPA  (see web/README.md)
 └── internal/                # Local working docs (git-ignored)
 ```
 
@@ -251,8 +254,8 @@ OAuth login goes through Spring Security at `/oauth2/authorization/{google|githu
 ### Other
 
 - `GET /actuator/health` (public) and `GET /actuator/prometheus` (exposed).
-- Swagger UI at `/swagger-ui.html` (springdoc wired; the API-keys endpoints carry
-  `@Operation`/`@Tag` annotations).
+- Swagger UI at `/swagger-ui.html` — enabled only under the `dev` profile and disabled by default
+  everywhere else (the API-keys endpoints carry `@Operation`/`@Tag` annotations).
 
 ---
 
@@ -315,6 +318,54 @@ tracing sends OTLP to Jaeger (`:4318`) with `traceId`/`spanId` in the logs.
 
 ---
 
+## Production deployment
+
+The backend is packaged as a self-contained Spring Boot jar and shipped as a multi-stage Docker
+image (`Dockerfile`): a JDK build stage driven by the Maven wrapper, and a JRE runtime stage that
+runs as an unprivileged user. The Compose files are for local dependencies and observability only —
+they do not build the application.
+
+```bash
+docker build -t pathio:latest .
+docker run --rm -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=prod \
+  -e DB_HOST=… -e DB_PORT=5432 -e DB_NAME=pathio_db -e DB_USER=… -e DB_PASSWORD=… \
+  -e REDIS_HOST=… -e REDIS_PORT=6379 \
+  -e JWT_SECRET="$(openssl rand -base64 48)" \
+  -e GOOGLE_CLIENT_ID=… -e GOOGLE_CLIENT_SECRET=… \
+  -e GITHUB_CLIENT_ID=… -e GITHUB_CLIENT_SECRET=… \
+  -e APP_CORS_ALLOWED_ORIGINS=https://app.example.com \
+  pathio:latest
+```
+
+### The `prod` profile fails fast
+
+Activating `prod` (`SPRING_PROFILES_ACTIVE=prod`) enables a startup guard that **refuses to boot**
+with development defaults still in place, reporting every problem at once:
+
+- `DB_PASSWORD` missing or a known development default (e.g. `secretpassword`).
+- Google/GitHub OAuth `client-id`/`client-secret` missing or still a placeholder (`dummy-*`, `your-*`).
+- `app.admin.password` set to a known default (`change-me`), shorter than 12 characters, or paired
+  with a missing `app.admin.email` — set both, or neither to run without a local admin.
+
+`JWT_SECRET` is validated separately in every non-dev profile: startup is refused when it is
+missing, shorter than 64 characters, or a known placeholder.
+
+### Swagger / OpenAPI
+
+API documentation (`/swagger-ui.html`, `/v3/api-docs`) is **disabled by default** and enabled only by
+the `dev` profile, so it is not exposed in production unless you explicitly set
+`SPRINGDOC_ENABLED=true`.
+
+### CI
+
+`.github/workflows/ci.yml` runs on every push and pull request to `main`. The **backend** job starts
+Postgres 16 and Redis 7 service containers and runs `./mvnw verify` (unit, integration and ArchUnit
+boundary tests); the **web** job type-checks, builds and tests the SPA; and a third job builds the
+Docker image.
+
+---
+
 ## web
 
 The web is a multi-route React SPA. See **`web/README.md`** for the full build plan,
@@ -340,7 +391,7 @@ full contract with real cookies and a working OAuth popup.
 
 ## Testing
 
-**Backend** (`./mvnw test`, 21 classes): ownership & analytics, link management (aliases, update,
+**Backend** (`./mvnw test`, 127 tests): ownership & analytics, link management (aliases, update,
 delete for owner/non-owner), analytics depth (HLL, rollups, breakdowns) plus alias-reuse binding,
 method security, OAuth popup, refresh-family rotation, JWT/cookie services, analytics flush, ID
 generation/Feistel units, redirect cache fallback, API-key lifecycle & authentication, and the auth
@@ -368,6 +419,7 @@ Flyway migrations run automatically on startup (`ddl-auto=validate`):
 | `V7` | analytics bound to immutable `urls.id` (FK `ON DELETE CASCADE`) |
 | `V8` | `id_generator` ceiling aligned to the 40-bit ID space (`chk_40bit_limit`) |
 | `V9` | `api_keys` — user API keys (only SHA-256 `key_hash` is stored) |
+| `V10` | `urls.user_id` decoupled from `users` (drops the `fk_urls_user` foreign key) |
 
 ---
 
