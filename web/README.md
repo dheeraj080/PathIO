@@ -66,6 +66,7 @@ carried.
 | `/dashboard` | `Dashboard` — shorten form, overview, links table | auth |
 | `/links/:shortCode` | `LinkDetail` — per-link analytics | auth |
 | `/profile` | `Profile` — edit display name | auth |
+| `/api-keys` | `ApiKeys` — create/list/revoke programmatic keys (plaintext shown once) | auth |
 | `/admin/users`, `/admin/links` | admin console | admin |
 | `*` | `NotFound` | public |
 
@@ -105,10 +106,10 @@ Seeded credentials (mock):
 
 ```
 src/
-  api/         typed API modules (auth, urls, analytics, users, admin, health)
+  api/         typed API modules (auth, urls, analytics, users, admin, apiKeys, health)
   auth/        AuthContext, popup OAuth, useAuth
   components/  UI primitives, layout, guards, charts
-  features/    shorten · links · analytics · admin
+  features/    shorten · links · analytics · admin · api-keys
   lib/         api client, errors, jwt, config, formatting
   mocks/       MSW handlers/server/browser + in-memory store
   routes/      page components
@@ -119,6 +120,4 @@ mock-server/   standalone Hono mock API
 
 ## Notes / not implemented (backend support pending)
 
-No local registration UI, no server-side QR/expiry/password fields, no geographic breakdown, no
-API-key management, and the rate limiter ships no `Retry-After` headers (a `429` shows a generic
-cooldown message).
+No local registration UI, no server-side QR/expiry/password fields, no geographic breakdown.

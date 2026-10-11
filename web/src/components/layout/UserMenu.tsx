@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
-import { LogOut, Shield, User as UserIcon } from 'lucide-react'
+import { KeyRound, LogOut, Shield, User as UserIcon } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Avatar } from '@/components/Avatar'
 import { useAuth } from '@/auth/useAuth'
@@ -87,6 +87,16 @@ export function UserMenu() {
           >
             <UserIcon className="h-4 w-4" />
             Profile
+          </Link>
+          <Link
+            to="/api-keys"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-slate-50 dark:hover:bg-slate-700"
+            tabIndex={0}
+          >
+            <KeyRound className="h-4 w-4" />
+            API keys
           </Link>
           {isAdmin ? (
             <Link

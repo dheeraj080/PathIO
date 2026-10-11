@@ -6,6 +6,7 @@ import {
   adminDeleteLink,
   authenticateAdmin,
   consumeRefreshToken,
+  createApiKey,
   createLink,
   createUser,
   deleteOwnedLink,
@@ -17,6 +18,7 @@ import {
   getOverview,
   getUrlAnalytics,
   listAllLinks,
+  listApiKeys,
   listOwnedLinks,
   listUsers,
   loginOrRegisterOAuth,
@@ -24,7 +26,9 @@ import {
   pageOf,
   registerRefreshToken,
   resetMockData,
+  revokeApiKey,
   revokeRefreshToken,
+  toApiKeyDTO,
   toUserDTO,
   toUserUrlResponse,
   updateOwnedLink,
@@ -309,6 +313,25 @@ app.get('/api/v1/analytics/urls/:shortCode/breakdown', (c) => {
 app.get('/api/v1/analytics/urls/:shortCode', (c) => {
   const user = requireUser(c)
   return c.json(getUrlAnalytics(c.req.param('shortCode'), user.id))
+})
+
+// --- API keys --------------------------------------------------------------
+app.get('/api/v1/api-keys', (c) => {
+  const user = requireUser(c)
+  return c.json(listApiKeys(user.id).map(toApiKeyDTO))
+})
+
+app.post('/api/v1/api-keys', async (c) => {
+  const user = requireUser(c)
+  const body = await c.req.json<{ name?: string; expiresInDays?: number | null }>()
+  const created = createApiKey(user.id, body.name ?? '', body.expiresInDays ?? null)
+  return c.json({ key: created.plaintext, apiKey: toApiKeyDTO(created.key) }, 201)
+})
+
+app.delete('/api/v1/api-keys/:id', (c) => {
+  const user = requireUser(c)
+  revokeApiKey(user.id, Number(c.req.param('id')))
+  return c.body(null, 204)
 })
 
 // --- public redirect (last) ------------------------------------------------

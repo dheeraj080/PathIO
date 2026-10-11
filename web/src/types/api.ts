@@ -101,3 +101,25 @@ export interface ApiErrorPayload {
   path?: string
   timestamp?: string
 }
+
+/** Metadata for a programmatic-access key; the key digest is never exposed. */
+export interface ApiKeyDTO {
+  id: number
+  name: string
+  active: boolean
+  createdAt: string
+  expiresAt: string | null
+  lastUsedAt: string | null
+}
+
+export interface CreateApiKeyRequest {
+  name: string
+  /** Validity window in days; null/omitted means the key never expires. */
+  expiresInDays?: number | null
+}
+
+export interface CreateApiKeyResult {
+  /** Plaintext API key — returned exactly once, at creation. */
+  key: string
+  apiKey: ApiKeyDTO
+}

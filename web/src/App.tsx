@@ -13,6 +13,7 @@ import { Signup } from '@/routes/Signup'
 import { Dashboard } from '@/routes/Dashboard'
 import { LinkDetail } from '@/routes/LinkDetail'
 import { Profile } from '@/routes/Profile'
+import { ApiKeys } from '@/routes/ApiKeys'
 import { AdminUsers } from '@/routes/AdminUsers'
 import { AdminLinks } from '@/routes/AdminLinks'
 import { NotFound } from '@/routes/NotFound'
@@ -69,6 +70,14 @@ export function App() {
                     element={
                       <RequireAuth>
                         <Profile />
+                      </RequireAuth>
+                    }
+                  />
+                  <Route
+                    path="api-keys"
+                    element={
+                      <RequireAuth>
+                        <ApiKeys />
                       </RequireAuth>
                     }
                   />

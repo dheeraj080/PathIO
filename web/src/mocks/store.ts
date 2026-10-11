@@ -1,5 +1,6 @@
 import type {
   AnalyticsOverviewResponse,
+  ApiKeyDTO,
   ClickBreakdownResponse,
   ClickHistoryPoint,
   DimensionCount,
@@ -68,10 +69,23 @@ export interface MockClick {
   visitor: string
 }
 
+export interface MockApiKey {
+  id: number
+  name: string
+  /** Digest only — the plaintext key exists solely in the create response. */
+  keyHash: string
+  active: boolean
+  createdAt: string
+  expiresAt: string | null
+  lastUsedAt: string | null
+  ownerId: string
+}
+
 interface MockState {
   users: MockUser[]
   links: MockLink[]
   clicks: MockClick[]
+  apiKeys: MockApiKey[]
   refreshing: Map<string, string> // jti -> userId
 }
 
@@ -91,7 +105,7 @@ const DEVICE_UA: Record<string, string> = {
   bot: 'Googlebot/2.1',
 }
 
-let state: MockState = { users: [], links: [], clicks: [], refreshing: new Map() }
+let state: MockState = { users: [], links: [], clicks: [], apiKeys: [], refreshing: new Map() }
 
 function makeRng(seed: number): () => number {
   let value = seed >>> 0
@@ -118,6 +132,8 @@ function nextId(): string {
   const n = idCounter.toString(16).padStart(12, '0')
   return `00000000-0000-4000-8000-${n}`
 }
+
+let apiKeyIdCounter = 0
 
 const BASE62 = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 function randomShortCode(): string {
@@ -164,7 +180,8 @@ function seedLink(
 
 export function resetMockData(): void {
   idCounter = 1000
-  state = { users: [], links: [], clicks: [], refreshing: new Map() }
+  apiKeyIdCounter = 0
+  state = { users: [], links: [], clicks: [], apiKeys: [], refreshing: new Map() }
 
   const admin: MockUser = {
     id: '00000000-0000-4000-8000-000000000001',
@@ -468,6 +485,90 @@ export function deleteUserRecord(id: string): void {
   const index = state.users.findIndex((user) => user.id === id)
   if (index === -1) throw new MockHttpError(404, 'Not Found', `User not found with ID: ${id}`)
   state.users.splice(index, 1)
+}
+
+// --- API keys CRUD ---------------------------------------------------------
+
+const KEY_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+const KEY_PREFIX = 'pio_'
+
+function randomKeyToken(): string {
+  let out = ''
+  const webCrypto = typeof crypto !== 'undefined' ? crypto : undefined
+  for (let i = 0; i < 32; i += 1) {
+    const roll = webCrypto?.getRandomValues
+      ? webCrypto.getRandomValues(new Uint32Array(1))[0] / 0xffffffff
+      : Math.random()
+    out += KEY_ALPHABET[Math.floor(roll * KEY_ALPHABET.length)]
+  }
+  return out
+}
+
+/**
+ * 64-char hex digest stand-in for the mock layer. Not cryptographic; it only
+ * guarantees the mock never keeps the plaintext key, mirroring the backend.
+ */
+function mockKeyDigest(plaintext: string): string {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < plaintext.length; i += 1) {
+    hash ^= plaintext.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0').repeat(8)
+}
+
+export function toApiKeyDTO(key: MockApiKey): ApiKeyDTO {
+  return {
+    id: key.id,
+    name: key.name,
+    active: key.active,
+    createdAt: key.createdAt,
+    expiresAt: key.expiresAt,
+    lastUsedAt: key.lastUsedAt,
+  }
+}
+
+export function listApiKeys(ownerId: string): MockApiKey[] {
+  return state.apiKeys
+    .filter((key) => key.ownerId === ownerId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+}
+
+export function createApiKey(
+  ownerId: string,
+  name: string,
+  expiresInDays?: number | null,
+): { plaintext: string; key: MockApiKey } {
+  if (!name || !name.trim()) {
+    throw new MockHttpError(400, 'Bad Request', 'Key name is required')
+  }
+  if (name.trim().length > 64) {
+    throw new MockHttpError(400, 'Bad Request', 'Key name must be at most 64 characters')
+  }
+  const plaintext = `${KEY_PREFIX}${randomKeyToken()}`
+  const now = new Date()
+  const key: MockApiKey = {
+    id: (apiKeyIdCounter += 1),
+    name: name.trim(),
+    keyHash: mockKeyDigest(plaintext),
+    active: true,
+    createdAt: now.toISOString(),
+    expiresAt:
+      expiresInDays && expiresInDays > 0
+        ? new Date(now.getTime() + expiresInDays * 86_400_000).toISOString()
+        : null,
+    lastUsedAt: null,
+    ownerId,
+  }
+  state.apiKeys.push(key)
+  return { plaintext, key }
+}
+
+export function revokeApiKey(ownerId: string, id: number): MockApiKey {
+  const key = state.apiKeys.find((item) => item.id === id && item.ownerId === ownerId)
+  if (!key) throw new MockHttpError(404, 'Not Found', 'API key not found')
+  key.active = false
+  return key
 }
 
 // --- analytics -------------------------------------------------------------

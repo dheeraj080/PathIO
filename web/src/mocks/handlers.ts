@@ -4,6 +4,7 @@ import type { TokenResponse } from '@/types/api'
 import {
   adminDeleteLink,
   authenticateAdmin,
+  createApiKey,
   createLink,
   createUser,
   deleteOwnedLink,
@@ -15,6 +16,7 @@ import {
   getOverview,
   getUrlAnalytics,
   listAllLinks,
+  listApiKeys,
   listOwnedLinks,
   listUsers,
   loginOrRegisterOAuth,
@@ -22,7 +24,9 @@ import {
   consumeRefreshToken,
   registerRefreshToken,
   resetMockData,
+  revokeApiKey,
   revokeRefreshToken,
+  toApiKeyDTO,
   toUserDTO,
   toUserUrlResponse,
   updateOwnedLink,
@@ -344,6 +348,40 @@ export const handlers = [
     try {
       const user = requireUser(request)
       return HttpResponse.json(getUrlAnalytics(String(params.shortCode), user.id))
+    } catch (error) {
+      return errorResponse(error)
+    }
+  }),
+
+  // --- API keys ----------------------------------------------------------
+  http.get(u('/api/v1/api-keys'), ({ request }) => {
+    try {
+      const user = requireUser(request)
+      return HttpResponse.json(listApiKeys(user.id).map(toApiKeyDTO))
+    } catch (error) {
+      return errorResponse(error)
+    }
+  }),
+
+  http.post(u('/api/v1/api-keys'), async ({ request }) => {
+    try {
+      const user = requireUser(request)
+      const body = (await request.json()) as { name?: string; expiresInDays?: number | null }
+      const created = createApiKey(user.id, body.name ?? '', body.expiresInDays ?? null)
+      return HttpResponse.json(
+        { key: created.plaintext, apiKey: toApiKeyDTO(created.key) },
+        { status: 201 },
+      )
+    } catch (error) {
+      return errorResponse(error)
+    }
+  }),
+
+  http.delete(u('/api/v1/api-keys/:id'), ({ request, params }) => {
+    try {
+      const user = requireUser(request)
+      revokeApiKey(user.id, Number(params.id))
+      return new HttpResponse(null, { status: 204 })
     } catch (error) {
       return errorResponse(error)
     }
