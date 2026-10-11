@@ -43,8 +43,8 @@ function StatCard({
 }
 
 /**
- * Dashboard summary cards. Built entirely from real backend data: overview
- * totals plus a per-link aggregation over the recent-links window.
+ * Dashboard summary cards, built entirely from the global analytics endpoints
+ * (overview totals, all-links 7-day rollup, top link).
  */
 export function OverviewCards() {
   const { data, isLoading, isError, error } = useDashboardAnalytics()
@@ -57,8 +57,6 @@ export function OverviewCards() {
     )
   }
 
-  const capped = (data?.totalElements ?? 0) > (data?.windowSize ?? 0)
-
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
@@ -66,11 +64,7 @@ export function OverviewCards() {
         label="Total links"
         value={data?.totalUrls}
         loading={isLoading}
-        detail={
-          capped
-            ? `First ${data?.windowSize} of ${data?.totalElements} shown`
-            : `${data?.totalElements ?? 0} in your account`
-        }
+        detail={`${data?.totalUrls ?? 0} in your account`}
       />
       <StatCard
         icon={<MousePointerClick className="size-4" />}
@@ -84,11 +78,7 @@ export function OverviewCards() {
         label="Clicks · last 7 days"
         value={data?.recentClicks}
         loading={isLoading}
-        detail={
-          capped
-            ? `Across the first ${data?.windowSize} links`
-            : `Across your ${data?.windowSize ?? 0} links`
-        }
+        detail="Across all links"
       />
       <StatCard
         icon={<Trophy className="size-4" />}
@@ -105,7 +95,7 @@ export function OverviewCards() {
               /{data.popular.shortCode}
             </Link>
           ) : data ? (
-            'No links yet'
+            'No clicks yet'
           ) : undefined
         }
       />
