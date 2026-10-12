@@ -3,8 +3,11 @@
 @tailwind utilities;
 
 /*
- * Design tokens — "terracotta" warm-cream palette, ported from the reference
- * design system (internal/url-shortener-ui).
+ * Design tokens — the single editorial palette shared by the marketing page and
+ * the authenticated app (they are the same product).
+ *
+ *   light  warm paper #f7f5f0 + ink text + ember accent  (ember #a93108)
+ *   dark   deep ink   #14120f + warm paper text + amber   (amber #fa9238)
  *
  * Colours are stored as space-separated RGB channels so Tailwind can apply
  * opacity modifiers (e.g. bg-primary/10, ring-ring/40). Components consume them
@@ -12,89 +15,116 @@
  * never reference raw colours directly.
  */
 :root {
-  --background: 255 255 255;
-  --foreground: 45 43 40;
-  --card: 255 255 255;
-  --card-foreground: 45 43 40;
-  --popover: 255 255 255;
-  --popover-foreground: 45 43 40;
-  --primary: 217 106 71;
-  --primary-foreground: 255 255 255;
-  --secondary: 229 225 216;
-  --secondary-foreground: 45 43 40;
-  --muted: 243 241 235;
-  --muted-foreground: 138 136 130;
-  --accent: 245 244 239;
-  --accent-foreground: 45 43 40;
-  --destructive: 204 37 37;
+  --background: 247 245 240;
+  --foreground: 33 30 26;
+  --card: 250 249 244;
+  --card-foreground: 33 30 26;
+  --popover: 250 249 244;
+  --popover-foreground: 33 30 26;
+  --primary: 169 49 8;
+  /* Deep ember is dark enough for warm-white label text (WCAG AA large + small). */
+  --primary-foreground: 255 251 246;
+  --secondary: 233 229 219;
+  --secondary-foreground: 33 30 26;
+  --muted: 241 238 230;
+  --muted-foreground: 94 88 79;
+  --accent: 233 229 219;
+  --accent-foreground: 33 30 26;
+  --destructive: 190 18 60;
   --destructive-foreground: 255 255 255;
-  --success: 22 163 74;
+  --success: 21 128 61;
   --success-foreground: 255 255 255;
-  --border: 209 202 190;
-  --input: 209 202 190;
-  --ring: 217 106 71;
+  --border: 219 213 199;
+  --input: 219 213 199;
+  --ring: 169 49 8;
 
-  --sidebar: 245 244 239;
-  --sidebar-foreground: 45 43 40;
-  --sidebar-primary: 217 106 71;
-  --sidebar-primary-foreground: 255 255 255;
-  --sidebar-accent: 229 225 216;
-  --sidebar-accent-foreground: 45 43 40;
-  --sidebar-border: 209 202 190;
-  --sidebar-ring: 217 106 71;
+  /* Rail sits a touch deeper than the page for a quiet, text-first sidebar. */
+  --sidebar: 243 240 232;
+  --sidebar-foreground: 33 30 26;
+  --sidebar-primary: 169 49 8;
+  --sidebar-primary-foreground: 255 251 246;
+  --sidebar-accent: 233 229 219;
+  --sidebar-accent-foreground: 33 30 26;
+  --sidebar-border: 219 213 199;
+  --sidebar-ring: 169 49 8;
 
-  --chart-clicks: 179 86 34;
-  --chart-locations: 52 211 153;
-  --chart-devices: 250 204 21;
-  --chart-os: 34 211 238;
-  --chart-referrers: 244 114 182;
-  --chart-top-links: 129 140 248;
+  --chart-clicks: 169 49 8;
+  --chart-locations: 21 128 61;
+  --chart-devices: 202 138 4;
+  --chart-os: 29 78 216;
+  --chart-referrers: 180 83 9;
+  --chart-top-links: 109 40 217;
 
-  --radius: 0.5rem;
-  --shadow-soft: 0 2px 12px -2px rgba(0, 0, 0, 0.04);
+  --radius: 0.25rem;
+  --shadow-soft: 0 1px 2px 0 rgb(47 43 36 / 0.04);
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.7) inset, 0 1px 2px 0 rgb(47 43 36 / 0.06);
+  --shadow-card-hover: 0 1px 0 0 rgb(255 255 255 / 0.7) inset, 0 16px 36px -20px rgb(47 43 36 / 0.2);
   --focus-ring: 2px solid rgb(var(--ring));
+
+  /*
+   * Font stacks (see tailwind.config fontFamily). The `--font-*` variables are
+   * overridden inside `.landing-theme` so the marketing page can carry its own
+   * body face while the app keeps Inter.
+   */
+  --font-sans: 'Inter Variable', 'Inter', 'ui-sans-serif', 'system-ui',
+    '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif';
+  --font-mono: 'Geist Mono', 'JetBrains Mono', 'ui-monospace', 'SFMono-Regular',
+    'Menlo', 'Consolas', 'monospace';
+  --font-display: 'Fraunces Variable', 'Fraunces', 'Georgia', 'Times New Roman', 'serif';
 }
 
+/*
+ * Dark theme — deep ink canvas, warm paper text, amber accent.
+ *
+ *   background  #14120f   deep ink canvas
+ *   sidebar     #181512   slightly lifted rail
+ *   card        #1a1714   grouped interactive surface
+ *   popover     #1f1b17   floating menus / tooltips
+ *   border      #332e27   thin hairlines
+ */
 .dark {
-  --background: 30 30 30;
-  --foreground: 234 230 223;
-  --card: 30 30 30;
-  --card-foreground: 234 230 223;
-  --popover: 30 30 30;
-  --popover-foreground: 234 230 223;
-  --primary: 201 93 60;
-  --primary-foreground: 255 255 255;
-  --secondary: 59 58 54;
-  --secondary-foreground: 234 230 223;
-  --muted: 61 59 54;
-  --muted-foreground: 155 151 143;
-  --accent: 59 58 54;
-  --accent-foreground: 234 230 223;
-  --destructive: 201 51 54;
+  --background: 20 18 15;
+  --foreground: 240 236 227;
+  --card: 26 23 20;
+  --card-foreground: 240 236 227;
+  --popover: 31 27 23;
+  --popover-foreground: 240 236 227;
+  --primary: 250 146 56;
+  /* Amber is bright: ink text on the accent, never white. */
+  --primary-foreground: 31 18 5;
+  --secondary: 45 41 35;
+  --secondary-foreground: 240 236 227;
+  --muted: 31 27 23;
+  --muted-foreground: 172 166 154;
+  --accent: 45 41 35;
+  --accent-foreground: 240 236 227;
+  --destructive: 244 63 94;
   --destructive-foreground: 255 255 255;
   --success: 34 197 94;
   --success-foreground: 255 255 255;
-  --border: 51 50 47;
-  --input: 51 50 47;
-  --ring: 201 93 60;
+  --border: 51 46 39;
+  --input: 51 46 39;
+  --ring: 250 146 56;
 
-  --sidebar: 18 18 18;
-  --sidebar-foreground: 234 230 223;
-  --sidebar-primary: 201 93 60;
-  --sidebar-primary-foreground: 255 255 255;
-  --sidebar-accent: 59 58 54;
-  --sidebar-accent-foreground: 234 230 223;
-  --sidebar-border: 51 50 47;
-  --sidebar-ring: 201 93 60;
+  --sidebar: 24 21 18;
+  --sidebar-foreground: 240 236 227;
+  --sidebar-primary: 250 146 56;
+  --sidebar-primary-foreground: 31 18 5;
+  --sidebar-accent: 31 27 23;
+  --sidebar-accent-foreground: 240 236 227;
+  --sidebar-border: 51 46 39;
+  --sidebar-ring: 250 146 56;
 
-  --chart-clicks: 249 115 22;
+  --chart-clicks: 250 146 56;
   --chart-locations: 52 211 153;
   --chart-devices: 250 204 21;
-  --chart-os: 34 211 238;
-  --chart-referrers: 244 114 182;
-  --chart-top-links: 129 140 248;
+  --chart-os: 96 165 250;
+  --chart-referrers: 251 146 60;
+  --chart-top-links: 167 139 250;
 
-  --shadow-soft: 0 2px 12px -2px rgba(0, 0, 0, 0.28);
+  --shadow-soft: 0 1px 2px 0 rgb(0 0 0 / 0.4);
+  --shadow-card: 0 1px 0 0 rgb(255 255 255 / 0.05) inset, 0 1px 2px 0 rgb(0 0 0 / 0.45);
+  --shadow-card-hover: 0 1px 0 0 rgb(255 255 255 / 0.06) inset, 0 16px 36px -20px rgb(0 0 0 / 0.65);
   --focus-ring: 2px solid rgb(var(--ring));
 }
 
@@ -110,6 +140,8 @@
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
+    /* Inter reads tighter at UI sizes; keep the whole shell optically consistent. */
+    letter-spacing: -0.011em;
   }
 
   /* Focus ring — visible, consistent across all interactive elements */
@@ -150,6 +182,92 @@
 
   /* Hairline divider used by the reference card/page system. */
   .hairline-divider {
-    border-bottom: 0.5px solid rgb(var(--border));
+    border-bottom: 1px solid rgb(var(--border));
   }
+
+  /* Numeric readouts align on a shared grid regardless of digit widths. */
+  .tnum {
+    font-variant-numeric: tabular-nums lining-nums;
+    font-feature-settings: 'tnum' 1, 'lnum' 1;
+  }
+
+  /*
+   * Scroll-triggered reveal: elements start settled (opacity 0, nudged down) and
+   * transition in when `.is-inview` lands. Reduced-motion users get content
+   * immediately via the media query below.
+   */
+  .reveal {
+    opacity: 0;
+    transform: translateY(18px);
+    transition:
+      opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  .reveal.is-inview {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
+  /* Fine measurement ticks used behind URL diagrams (ruler aesthetic). */
+  .ticks {
+    background-image: repeating-linear-gradient(
+      to right,
+      rgb(var(--foreground) / 0.16) 0,
+      rgb(var(--foreground) / 0.16) 1px,
+      transparent 1px,
+      transparent 9px
+    );
+  }
+
+  /* Bars that grow from their baseline when revealed (used in story charts). */
+  .bar-grow {
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--bar-delay, 0ms);
+  }
+
+  .bar-grow.is-inview {
+    transform: scaleY(1);
+  }
+
+  /* Horizontal counterpart, used by the analytics breakdown bars. */
+  .bar-grow-x {
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--bar-delay, 0ms);
+  }
+
+  .bar-grow-x.is-inview {
+    transform: scaleX(1);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bar-grow,
+    .bar-grow-x {
+      transform: none;
+      transition: none;
+    }
+  }
+}
+
+/*
+ * Landing theme — the marketing layout keeps its own characterful body face
+ * (Geist) while sharing the same colour tokens as the app. No second palette.
+ */
+.landing-theme {
+  --font-sans: 'Geist Variable', 'Geist', 'ui-sans-serif', 'system-ui', 'sans-serif';
+  --font-mono: 'Geist Mono Variable', 'Geist Mono', 'ui-monospace', 'SFMono-Regular',
+    'Menlo', 'Consolas', 'monospace';
 }

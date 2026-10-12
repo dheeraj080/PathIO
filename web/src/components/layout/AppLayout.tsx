@@ -47,14 +47,14 @@ export function AppLayout() {
   }
 
   return (
-    <div className="flex h-dvh w-full overflow-hidden bg-sidebar text-foreground">
+    <div className="flex h-dvh w-full overflow-hidden bg-background text-foreground">
       <Sidebar collapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} />
 
       <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
         <div
           className={cn(
-            'z-20 shrink-0 border-b bg-sidebar transition-colors duration-200',
-            isScrolled ? 'border-sidebar-border' : 'border-transparent',
+            'z-20 shrink-0 border-b bg-background/80 backdrop-blur-sm transition-colors duration-200',
+            isScrolled ? 'border-border' : 'border-transparent',
           )}
         >
           <div className={CONTENT_SHELL_CLASS}>
@@ -63,7 +63,7 @@ export function AppLayout() {
         </div>
 
         <main
-          className="min-h-0 flex-1 overflow-y-auto bg-sidebar [scrollbar-gutter:stable]"
+          className="min-h-0 flex-1 overflow-y-auto bg-background [scrollbar-gutter:stable]"
           onScroll={handleScroll}
         >
           <div className={cn(CONTENT_SHELL_CLASS, 'pb-8 pt-2 md:pb-10 md:pt-6')}>

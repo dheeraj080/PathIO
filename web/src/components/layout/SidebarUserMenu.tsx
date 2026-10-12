@@ -47,7 +47,7 @@ export function SidebarUserMenu({ onNavigate, collapsed = false }: SidebarUserMe
         aria-label="Account menu"
         title={collapsed ? (user.name ?? user.email) : undefined}
         className={cn(
-          'flex w-full items-center gap-3 rounded-lg text-left transition-colors hover:bg-sidebar-accent/50',
+          'flex w-full items-center gap-3 rounded-sm text-left transition-colors hover:bg-sidebar-accent/60',
           'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-sidebar-ring/40',
           collapsed ? 'justify-center px-0 py-2' : 'px-2 py-2',
         )}

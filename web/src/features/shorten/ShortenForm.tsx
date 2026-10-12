@@ -1,10 +1,9 @@
 import { useEffect, useState, type FormEvent, type Ref } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { ArrowRight, ExternalLink, QrCode, Sparkles, Wand2 } from 'lucide-react'
+import { ArrowRight, ExternalLink, QrCode } from 'lucide-react'
 import { CREATE_LINK_EVENT } from '@/lib/events'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Card } from '@/components/ui/Card'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { useToast } from '@/components/ui/Toast'
 import { QrPanel } from '@/features/shorten/QrPanel'
@@ -105,47 +104,49 @@ export function ShortenForm({ inputRef }: { inputRef?: Ref<HTMLInputElement> } =
   }
 
   return (
-    <Card className="p-4 sm:p-5">
-      <div className="flex flex-col gap-4">
+    <section className="border border-border bg-card p-4 sm:p-6">
+      <div className="flex flex-col gap-5">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
+          <h2 className="font-display text-2xl font-medium tracking-[-0.02em] text-foreground sm:text-3xl">
             Shorten a URL
           </h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            Create short, trackable links with click analytics, referrers and device breakdowns.
+          <p className="mt-2 text-sm text-muted-foreground">
+            Paste a destination to create a short, trackable link with click analytics, referrers
+            and device breakdowns.
           </p>
         </div>
 
-        <form
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-3 rounded-xl border border-border bg-background p-2 sm:flex-row sm:items-center"
-        >
-          <div className="flex-1">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-2 sm:flex-row sm:items-start">
+          <div className="min-w-0 flex-1">
             <Input
               ref={inputRef}
               aria-label="Long URL"
-              placeholder="Paste a long URL, e.g. https://example.com/very/long/path"
+              placeholder="https://example.com/very/long/path"
               value={longUrl}
               onChange={(event) => setLongUrl(event.target.value)}
               onBlur={() => setTouched(true)}
               error={urlError}
-              className="border-transparent"
+              className="h-12 font-mono"
             />
           </div>
-          <Button type="submit" size="lg" loading={isPending} className="sm:w-auto">
+          <Button
+            type="submit"
+            size="lg"
+            loading={isPending}
+            className="h-12 shrink-0 px-6"
+          >
             Shorten URL
             <ArrowRight className="h-4 w-4" />
           </Button>
         </form>
 
-        <div className="flex items-center justify-between text-sm">
+        <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => setShowAlias((value) => !value)}
             aria-expanded={showAlias}
-            className="inline-flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-primary"
+            className="text-sm text-foreground underline decoration-border underline-offset-4 transition-colors hover:text-primary hover:decoration-primary"
           >
-            <Wand2 className="h-4 w-4" />
             {showAlias ? 'Hide custom alias' : 'Add a custom alias'}
           </button>
         </div>
@@ -158,25 +159,22 @@ export function ShortenForm({ inputRef }: { inputRef?: Ref<HTMLInputElement> } =
             value={alias}
             onChange={(event) => setAlias(event.target.value)}
             error={aliasError}
-            hint={
-              aliasError ? undefined : `Letters, numbers, hyphens and underscores (max 32).`
-            }
+            hint={aliasError ? undefined : 'Letters, numbers, hyphens and underscores (max 32).'}
             maxLength={ALIAS_MAX_LENGTH}
           />
         ) : null}
 
         {result ? (
-          <div className="animate-fade-in rounded-xl border border-primary/20 bg-primary/5 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-primary">
-              <Sparkles className="h-4 w-4" />
+          <div className="animate-fade-in border border-border bg-muted/40 p-4">
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
               Your short link is ready
-            </div>
+            </p>
             <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <a
                 href={result.shortUrl}
                 target="_blank"
                 rel="noreferrer"
-                className="truncate font-mono text-sm text-primary underline-offset-2 hover:underline"
+                className="truncate font-mono text-sm text-foreground underline-offset-4 hover:text-primary hover:underline"
               >
                 {result.shortUrl}
               </a>
@@ -203,6 +201,6 @@ export function ShortenForm({ inputRef }: { inputRef?: Ref<HTMLInputElement> } =
           </div>
         ) : null}
       </div>
-    </Card>
+    </section>
   )
 }

@@ -11,14 +11,17 @@ export function Dashboard() {
   const shortenInputRef = useRef<HTMLInputElement>(null)
 
   return (
-    <PageContainer>
-      <p className="text-sm text-muted-foreground">
-        Welcome back{user?.name ? `, ${user.name}` : ''}.
+    <PageContainer className="gap-8">
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        Welcome back{user?.name ? `, ${user.name}` : ''}
       </p>
 
       <FirstLinkNudge onStart={() => shortenInputRef.current?.focus()} />
+
       <ShortenForm inputRef={shortenInputRef} />
+
       <OverviewCards />
+
       <LinkList />
     </PageContainer>
   )

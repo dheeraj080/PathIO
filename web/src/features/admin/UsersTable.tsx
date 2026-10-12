@@ -54,7 +54,7 @@ export function UsersTable() {
           {Array.from({ length: 4 }).map((_, index) => (
             <div
               key={index}
-              className="flex items-center gap-4 rounded-xl border-[0.5px] border-border bg-card p-4 md:p-5"
+              className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 md:p-5"
             >
               <Skeleton className="size-9 rounded-full" />
               <div className="flex-1 space-y-2">
@@ -65,7 +65,7 @@ export function UsersTable() {
           ))}
         </div>
       ) : isError ? (
-        <div className="rounded-xl border-[0.5px] border-border bg-card p-6">
+        <div className="rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-destructive">{getErrorMessage(error)}</p>
         </div>
       ) : !data || data.length === 0 ? (
@@ -77,7 +77,7 @@ export function UsersTable() {
             return (
               <div
                 key={user.id}
-                className="flex items-center gap-4 rounded-xl border-[0.5px] border-border bg-card p-4 transition-shadow hover:shadow-soft md:p-5"
+                className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-soft md:p-5"
               >
                 <Avatar name={user.name} image={user.image} size={36} />
                 <div className="min-w-0 flex-1">

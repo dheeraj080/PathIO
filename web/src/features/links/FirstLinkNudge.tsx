@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowRight, Link2, Sparkles, X } from 'lucide-react'
+import { ArrowRight, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { useLinkWindow } from '@/features/links/useLinkWindow'
 import { isValidHttpUrl } from '@/features/shorten/ShortenForm'
@@ -43,25 +43,23 @@ export function FirstLinkNudge({ onStart }: { onStart?: () => void }) {
   return (
     <section
       aria-label="Getting started"
-      className="flex flex-col gap-4 rounded-xl border border-primary/20 bg-primary/5 p-5 sm:flex-row sm:items-center sm:justify-between"
+      className="flex flex-col gap-4 border-y border-border py-5 sm:flex-row sm:items-center sm:justify-between"
     >
-      <div className="flex items-start gap-3">
-        <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          {prefill ? <Sparkles className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}
-        </span>
-        <div>
-          <h2 className="text-sm font-semibold text-foreground">
-            {prefill ? 'Finish creating your short link' : 'Create your first short link'}
-          </h2>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {prefill
-              ? 'We kept the URL you started on the home page. It is ready in the shortener below — review it and create your link.'
-              : 'Paste a destination URL in the box below to create your first short link. You can add a custom alias too.'}
-          </p>
-        </div>
+      <div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-primary">
+          {prefill ? 'In progress' : 'Getting started'}
+        </p>
+        <h2 className="mt-1 font-display text-lg font-medium tracking-[-0.01em] text-foreground">
+          {prefill ? 'Finish creating your short link' : 'Create your first short link'}
+        </h2>
+        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+          {prefill
+            ? 'We kept the URL you started on the home page. It is ready in the shortener below — review it and create your link.'
+            : 'Paste a destination URL in the box below to create your first short link. You can add a custom alias too.'}
+        </p>
       </div>
 
-      <div className="flex shrink-0 items-center gap-2 pl-12 sm:pl-0">
+      <div className="flex shrink-0 items-center gap-2">
         <Button type="button" size="sm" onClick={() => onStart?.()}>
           {prefill ? 'Review your link' : 'Start shortening'}
           <ArrowRight className="h-4 w-4" />

@@ -84,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const data = await refreshRequest()
         if (!cancelled) applySession(data.accessToken, data.user)
-      } catch {
+      } catch (error) {
         if (!cancelled) clearSession()
       }
     })()

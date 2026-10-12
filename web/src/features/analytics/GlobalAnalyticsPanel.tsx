@@ -1,32 +1,32 @@
-import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getGlobalBreakdown, getGlobalHistory } from '@/api/analytics.api'
 import { AnalyticsCard } from '@/components/analytics/AnalyticsCard'
 import { HistoryChart } from '@/components/charts/HistoryChart'
 import { BreakdownBars } from '@/components/charts/BreakdownBars'
 import { ComparisonBadge } from '@/features/analytics/ComparisonBadge'
+import { CRAWLER_VALUES, deviceLabel, referrerLabel } from '@/features/analytics/labels'
+import { buildDailySeries, sumClicks } from '@/features/analytics/series'
 import { Spinner } from '@/components/ui/Spinner'
 import { getErrorMessage } from '@/lib/errors'
-
-const RANGES = [7, 30, 90] as const
-type Range = (typeof RANGES)[number]
-
-const RANGE_TABS = RANGES.map((value) => ({ label: `${value}d`, value: String(value) }))
+import type { Range } from '@/features/analytics/ranges'
 
 /** History is fetched for the current period plus the previous one, so the badge can compare. */
 const COMPARISON_PERIODS = 2
 
-function totalClicksOf(points: { clicks: number }[]): number {
-  return points.reduce((total, point) => total + point.clicks, 0)
+function NoClicks() {
+  return (
+    <p className="flex h-56 items-center justify-center text-sm text-muted-foreground sm:h-64">
+      No clicks in this period.
+    </p>
+  )
 }
 
 /**
- * All-links analytics: a combined click timeline plus referrer and device
- * breakdowns aggregated across every link the user owns.
+ * All-links analytics: the current-period total, a click timeline, and referrer
+ * and device breakdowns aggregated across every link the user owns. Missing days
+ * are filled with zero so the line is always continuous.
  */
-export function GlobalAnalyticsPanel() {
-  const [range, setRange] = useState<Range>(30)
-
+export function GlobalAnalyticsPanel({ range }: { range: Range }) {
   const history = useQuery({
     queryKey: ['analytics', 'global', 'history', range * COMPARISON_PERIODS],
     queryFn: () => getGlobalHistory(range * COMPARISON_PERIODS),
@@ -37,36 +37,27 @@ export function GlobalAnalyticsPanel() {
     queryFn: () => getGlobalBreakdown(range),
   })
 
-  const historyPoints = history.data ?? []
-  const chartData = historyPoints.slice(-range)
-  const previousPoints = historyPoints.slice(0, Math.max(0, historyPoints.length - range))
-  const currentPeriodClicks = totalClicksOf(chartData)
-  const previousPeriodClicks = history.isSuccess ? totalClicksOf(previousPoints) : null
+  const series = history.data ? buildDailySeries(history.data, range * COMPARISON_PERIODS) : []
+  const chartData = series.slice(-range)
+  const previousPoints = series.slice(0, Math.max(0, series.length - range))
+  const currentPeriodClicks = sumClicks(chartData)
+  const previousPeriodClicks = history.isSuccess ? sumClicks(previousPoints) : null
 
   return (
-    <div className="flex flex-col gap-4">
-      <AnalyticsCard
-        tabs={RANGE_TABS}
-        activeTab={String(range)}
-        onTabChange={(value) => setRange(Number(value) as Range)}
-      >
+    <div className="flex flex-col gap-10">
+      <AnalyticsCard label="Total clicks · all links">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Total clicks · all links
-            </p>
-            <p className="mt-2 text-3xl font-extrabold tabular-nums text-foreground sm:text-4xl">
+            <p className="tnum font-display text-5xl font-medium leading-none tracking-[-0.02em] text-foreground sm:text-6xl">
               {history.isLoading ? (
-                <Spinner className="h-7 w-7" />
+                <Spinner className="h-8 w-8" />
               ) : history.isError ? (
                 '—'
               ) : (
                 currentPeriodClicks.toLocaleString()
               )}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Combined across every short link in your account.
-            </p>
+            <p className="mt-3 text-sm text-muted-foreground">Last {range} days</p>
           </div>
           <ComparisonBadge
             totalClicks={currentPeriodClicks}
@@ -75,41 +66,48 @@ export function GlobalAnalyticsPanel() {
           />
         </div>
 
-        <div className="mt-6 h-64">
+        <div className="mt-8">
           {history.isLoading ? (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex h-56 items-center justify-center sm:h-64">
               <Spinner className="h-6 w-6" />
             </div>
           ) : history.isError ? (
             <p className="text-sm text-destructive">{getErrorMessage(history.error)}</p>
-          ) : chartData.length > 0 ? (
-            <HistoryChart data={chartData} />
+          ) : currentPeriodClicks === 0 ? (
+            <NoClicks />
           ) : (
-            <p className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              No clicks recorded in this period.
-            </p>
+            <HistoryChart data={chartData} />
           )}
         </div>
       </AnalyticsCard>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <AnalyticsCard title="Referrers">
+      <div className="grid gap-10 md:grid-cols-2">
+        <AnalyticsCard label="Referrers">
           {breakdown.isLoading ? (
             <Spinner className="h-5 w-5" />
           ) : breakdown.isError ? (
             <p className="text-sm text-destructive">{getErrorMessage(breakdown.error)}</p>
           ) : (
-            <BreakdownBars items={breakdown.data?.referrers ?? []} emptyLabel="No referrers yet." />
+            <BreakdownBars
+              items={breakdown.data?.referrers ?? []}
+              emptyLabel="No referrers yet."
+              formatLabel={referrerLabel}
+            />
           )}
         </AnalyticsCard>
 
-        <AnalyticsCard title="Devices">
+        <AnalyticsCard label="Devices">
           {breakdown.isLoading ? (
             <Spinner className="h-5 w-5" />
           ) : breakdown.isError ? (
             <p className="text-sm text-destructive">{getErrorMessage(breakdown.error)}</p>
           ) : (
-            <BreakdownBars items={breakdown.data?.devices ?? []} emptyLabel="No devices yet." />
+            <BreakdownBars
+              items={breakdown.data?.devices ?? []}
+              emptyLabel="No devices yet."
+              formatLabel={deviceLabel}
+              mutedValues={CRAWLER_VALUES}
+            />
           )}
         </AnalyticsCard>
       </div>

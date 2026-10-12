@@ -101,7 +101,7 @@ export function DropdownMenuContent({
       role="menu"
       onPointerDown={(event) => event.stopPropagation()}
       className={cn(
-        'absolute z-40 min-w-[11rem] animate-fade-in overflow-hidden rounded-xl border-[0.5px] border-border bg-popover p-1 text-popover-foreground shadow-soft',
+        'absolute z-40 min-w-[11rem] animate-fade-in overflow-hidden rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-soft',
         align === 'end' ? 'right-0' : 'left-0',
         side === 'top' ? 'bottom-full mb-2' : 'top-full mt-2',
         className,

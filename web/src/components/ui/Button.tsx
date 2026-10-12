@@ -12,13 +12,14 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-primary text-primary-foreground shadow-xs hover:bg-primary/90',
+  // The accent is reserved for the single primary action; no glow, flat fill.
+  primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
   secondary:
-    'border-[0.5px] border-input bg-background text-foreground shadow-xs hover:bg-accent hover:text-accent-foreground',
-  ghost: 'bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground',
+    'border border-border bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground',
+  ghost: 'bg-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
   danger:
-    'bg-destructive text-destructive-foreground shadow-xs hover:bg-destructive/90 focus-visible:ring-destructive/30',
-  link: 'bg-transparent text-primary underline-offset-4 hover:underline',
+    'bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/30',
+  link: 'bg-transparent text-foreground underline underline-offset-4 hover:text-primary',
 }
 
 const SIZES: Record<ButtonSize, string> = {
@@ -37,9 +38,10 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     <button
       ref={ref}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium transition-colors',
+        'inline-flex shrink-0 items-center justify-center whitespace-nowrap font-medium',
+        'transition-[color,background-color,border-color,transform] duration-150 ease-out active:scale-[0.985]',
         'outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40',
-        'disabled:pointer-events-none disabled:opacity-50',
+        'disabled:pointer-events-none disabled:opacity-50 disabled:active:scale-100',
         '[&_svg]:pointer-events-none [&_svg]:shrink-0',
         VARIANTS[variant],
         SIZES[size],

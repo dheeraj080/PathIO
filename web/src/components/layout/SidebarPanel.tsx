@@ -19,19 +19,19 @@ export function SidebarPanel({
   onNavigate,
 }: SidebarPanelProps) {
   return (
-    <div className={cn('flex h-full flex-col justify-between', collapsed ? 'p-3' : 'p-6')}>
+    <div className={cn('flex h-full flex-col justify-between', collapsed ? 'p-2' : 'p-5')}>
       <SidebarNav onNavigate={onNavigate} collapsed={collapsed} />
 
-      <div className="flex flex-col gap-2 border-t-[0.5px] border-sidebar-border pt-4">
+      <div className="flex flex-col gap-1 border-t border-sidebar-border pt-4">
         {onToggleCollapse ? (
           <button
             type="button"
             onClick={onToggleCollapse}
             aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             className={cn(
-              'flex items-center gap-3 rounded-lg text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+              'flex items-center gap-3 rounded-sm text-muted-foreground transition-colors hover:text-sidebar-foreground',
               'outline-none focus-visible:ring-[3px] focus-visible:ring-sidebar-ring/40',
-              collapsed ? 'justify-center py-2' : 'px-3 py-2 text-sm font-medium',
+              collapsed ? 'justify-center py-2' : 'px-2 py-2 text-sm font-medium',
             )}
           >
             {collapsed ? (

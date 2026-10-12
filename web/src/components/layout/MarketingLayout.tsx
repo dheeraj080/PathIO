@@ -1,29 +1,34 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
-import { Brand } from '@/components/Brand'
 import { ThemeToggle } from '@/components/ThemeToggle'
-import { Button } from '@/components/ui/Button'
-import { CONTENT_SHELL_CLASS } from '@/lib/layout'
+import { LandingButton } from '@/routes/landing/LandingButton'
+import { LandingMark } from '@/routes/landing/LandingMark'
 import { cn } from '@/lib/cn'
+import { CONTENT_SHELL_CLASS } from '@/lib/layout'
 
 const NAV = [
+  { href: '#story', label: 'Story' },
   { href: '#features', label: 'Features' },
   { href: '#how', label: 'How it works' },
-  { href: '#use-cases', label: 'Use cases' },
   { href: '#faq', label: 'FAQ' },
 ]
 
 const navLinkClass =
-  'rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-sidebar-accent/50 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40'
+  'rounded-sm px-1.5 py-1 font-mono text-xs uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:text-foreground ' +
+  'after:absolute after:-bottom-1 after:left-1.5 after:h-px after:w-[calc(100%-12px)] after:origin-left after:scale-x-0 after:bg-primary after:transition-transform after:duration-200 hover:after:scale-x-100 ' +
+  'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40'
 
-/** Public marketing chrome: responsive header + footer around the landing page. */
+/**
+ * Public marketing chrome around the landing page. The `.landing-theme` class
+ * scopes the editorial colour + type tokens to this layout only — the dashboard
+ * keeps its own palette.
+ */
 export function MarketingLayout() {
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const toggleRef = useRef<HTMLButtonElement>(null)
 
-  // Close the mobile menu on Escape (returning focus) or an outside click.
   useEffect(() => {
     if (!open) return
     const onKeyDown = (event: KeyboardEvent) => {
@@ -47,21 +52,21 @@ export function MarketingLayout() {
   }, [open])
 
   return (
-    <div className="flex min-h-screen flex-col bg-sidebar text-foreground">
+    <div className="landing-theme flex min-h-screen flex-col bg-background font-sans text-foreground">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-soft"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-md focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-foreground focus:shadow-card"
       >
         Skip to content
       </a>
 
-      <header className="sticky top-0 z-30 border-b border-border bg-sidebar/90 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b border-border bg-background/85 backdrop-blur">
         <div className={cn(CONTENT_SHELL_CLASS, 'flex h-16 items-center justify-between gap-4')}>
-          <Brand />
+          <LandingMark />
 
-          <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
+          <nav aria-label="Primary" className="hidden items-center gap-6 md:flex">
             {NAV.map((item) => (
-              <a key={item.href} href={item.href} className={navLinkClass}>
+              <a key={item.href} href={item.href} className={cn('relative', navLinkClass)}>
                 {item.label}
               </a>
             ))}
@@ -69,20 +74,18 @@ export function MarketingLayout() {
 
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Link to="/login" className="hidden sm:block">
-              <Button variant="ghost" size="sm">
-                Sign in
-              </Button>
-            </Link>
-            <Link to="/signup" className="hidden sm:block">
-              <Button size="sm">Start shortening</Button>
-            </Link>
+            <LandingButton to="/login" variant="ghost" size="sm" className="hidden sm:inline-flex">
+              Sign in
+            </LandingButton>
+            <LandingButton to="/signup" size="sm" className="hidden sm:inline-flex">
+              Start shortening
+            </LandingButton>
 
             <button
               ref={toggleRef}
               type="button"
               onClick={() => setOpen((value) => !value)}
-              className="rounded-md p-2 text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 md:hidden"
+              className="rounded-md p-2 text-foreground transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40 md:hidden"
               aria-label={open ? 'Close menu' : 'Open menu'}
               aria-expanded={open}
               aria-controls="marketing-mobile-menu"
@@ -96,26 +99,38 @@ export function MarketingLayout() {
           id="marketing-mobile-menu"
           ref={menuRef}
           hidden={!open}
-          className="border-t border-border bg-sidebar px-4 py-4 md:hidden"
+          className="border-t border-border bg-background px-4 py-4 md:hidden"
         >
           <nav aria-label="Mobile" className="flex flex-col gap-1">
             {NAV.map((item) => (
-              <a key={item.href} href={item.href} onClick={() => setOpen(false)} className={navLinkClass}>
+              <a
+                key={item.href}
+                href={item.href}
+                onClick={() => setOpen(false)}
+                className={cn('relative py-2.5', navLinkClass)}
+              >
                 {item.label}
               </a>
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
-            <Link to="/login" onClick={() => setOpen(false)}>
-              <Button variant="secondary" size="sm" className="w-full justify-center">
-                Sign in
-              </Button>
-            </Link>
-            <Link to="/signup" onClick={() => setOpen(false)}>
-              <Button size="sm" className="w-full justify-center">
-                Start shortening
-              </Button>
-            </Link>
+            <LandingButton
+              to="/login"
+              variant="outline"
+              size="md"
+              className="w-full"
+              onClick={() => setOpen(false)}
+            >
+              Sign in
+            </LandingButton>
+            <LandingButton
+              to="/signup"
+              size="md"
+              className="w-full"
+              onClick={() => setOpen(false)}
+            >
+              Start shortening
+            </LandingButton>
           </div>
         </div>
       </header>
@@ -124,66 +139,54 @@ export function MarketingLayout() {
         <Outlet />
       </main>
 
-      <footer className="border-t border-border bg-sidebar">
-        <div className={cn(CONTENT_SHELL_CLASS, 'grid gap-8 py-12 sm:grid-cols-2 lg:grid-cols-4')}>
-          <div className="sm:col-span-2">
-            <Brand />
-            <p className="mt-3 max-w-xs text-sm text-muted-foreground">
-              A URL shortener with built-in click analytics. Create short links, choose custom
-              aliases, and see how each link performs.
-            </p>
-          </div>
+      <footer className="border-t border-border bg-card">
+        <div className={cn(CONTENT_SHELL_CLASS, 'py-14')}>
+          <div className="grid gap-12 lg:grid-cols-[2fr_1fr_1fr]">
+            <div>
+              <LandingMark />
+              <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
+                A URL shortener with built-in click analytics: short links, custom aliases, and a
+                per-link report on every click.
+              </p>
+              <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                Set in Fraunces &amp; Geist
+              </p>
+            </div>
 
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Product</h2>
-            <ul className="mt-3 space-y-2 text-sm">
+            <nav aria-label="Product" className="flex flex-col gap-3">
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.22em] text-foreground">
+                Product
+              </h2>
               {NAV.map((item) => (
-                <li key={item.href}>
-                  <a
-                    href={item.href}
-                    className="rounded text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none"
-                  >
-                    {item.label}
-                  </a>
-                </li>
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="w-fit rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {item.label}
+                </a>
               ))}
-            </ul>
+            </nav>
+
+            <nav aria-label="Account" className="flex flex-col gap-3">
+              <h2 className="font-mono text-[11px] uppercase tracking-[0.22em] text-foreground">
+                Account
+              </h2>
+              <Link to="/signup" className="w-fit rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground">
+                Create account
+              </Link>
+              <Link to="/login" className="w-fit rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground">
+                Sign in
+              </Link>
+              <Link to="/dashboard" className="w-fit rounded-sm text-sm text-muted-foreground transition-colors hover:text-foreground">
+                Dashboard
+              </Link>
+            </nav>
           </div>
 
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Account</h2>
-            <ul className="mt-3 space-y-2 text-sm">
-              <li>
-                <Link
-                  to="/signup"
-                  className="rounded text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none"
-                >
-                  Create account
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/login"
-                  className="rounded text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none"
-                >
-                  Sign in
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to="/dashboard"
-                  className="rounded text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none"
-                >
-                  Dashboard
-                </Link>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="border-t border-border">
-          <div className={cn(CONTENT_SHELL_CLASS, 'py-6 text-xs text-muted-foreground')}>
-            PathIO — URL shortener with built-in click analytics.
+          <div className="mt-12 flex flex-col gap-2 border-t border-border pt-6 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+            <span>© 2026 PathIO — short links with built-in click analytics</span>
+            <span className="hidden sm:inline">Long URLs in · stories out</span>
           </div>
         </div>
       </footer>

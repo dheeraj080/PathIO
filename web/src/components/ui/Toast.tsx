@@ -45,7 +45,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={toast.id}
             role="status"
             className={cn(
-              'pointer-events-auto flex items-start gap-2 rounded-xl border-[0.5px] px-4 py-3 text-sm shadow-soft animate-fade-in',
+              'pointer-events-auto flex items-start gap-2 rounded-xl border px-4 py-3 text-sm shadow-soft animate-fade-in',
               toast.tone === 'success' &&
                 'border-green-700/20 bg-green-100 text-green-700 dark:border-green-300/20 dark:bg-green-950 dark:text-green-300',
               toast.tone === 'error' &&

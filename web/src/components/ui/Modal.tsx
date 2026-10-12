@@ -36,7 +36,7 @@ export function Modal({ open, onClose, title, description, children, footer, cla
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : undefined}
         className={cn(
-          'relative z-10 w-full max-w-md animate-fade-in rounded-2xl border-[0.5px] border-border bg-card text-card-foreground shadow-soft',
+          'relative z-10 w-full max-w-md animate-fade-in rounded-2xl border border-border bg-card text-card-foreground shadow-soft',
           className,
         )}
       >

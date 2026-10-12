@@ -1,10 +1,9 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
-import { ArrowDownUp, Check, Plus, RefreshCw, Search } from 'lucide-react'
+import { ArrowDownUp, Check, RefreshCw, Search } from 'lucide-react'
 import { deleteUrl } from '@/api/urls.api'
 import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Pagination } from '@/components/ui/Pagination'
 import {
@@ -20,7 +19,6 @@ import { EmptyLinksState } from '@/features/links/EmptyLinksState'
 import { EditLinkDialog } from '@/features/links/EditLinkDialog'
 import { useLinkWindow } from '@/features/links/useLinkWindow'
 import { useToast } from '@/components/ui/Toast'
-import { requestCreateLink } from '@/lib/events'
 import { getErrorMessage } from '@/lib/errors'
 import type { UserUrlResponse } from '@/types/api'
 
@@ -123,23 +121,22 @@ export function LinkList() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <SectionHeader count={undefined} />
-        <Card className="overflow-hidden">
-          <Toolbar sort={sort} onChangeSort={setSort} caption="" onRefresh={refresh} />
-          <div className="p-4">
-            <LinkCardSkeletonList />
-          </div>
-        </Card>
+        <Toolbar sort={sort} onChangeSort={setSort} caption="" />
+        <LinkCardSkeletonList />
       </div>
     )
   }
 
   if (isError) {
     return (
-      <Card className="p-6">
-        <p className="text-sm text-destructive">{getErrorMessage(error)}</p>
-      </Card>
+      <div className="flex flex-col gap-3">
+        <SectionHeader count={undefined} />
+        <p className="border-t border-border py-6 text-sm text-destructive">
+          {getErrorMessage(error)}
+        </p>
+      </div>
     )
   }
 
@@ -148,54 +145,52 @@ export function LinkList() {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-3">
       <SectionHeader count={data.totalElements} />
 
-      <Card className="overflow-hidden">
-        <Toolbar sort={sort} onChangeSort={setSort} caption={caption} onRefresh={refresh} />
+      <Toolbar sort={sort} onChangeSort={setSort} caption={caption} onRefresh={refresh} />
 
-        {pageItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-            <span className="flex size-12 items-center justify-center rounded-xl border-[0.5px] border-border bg-muted text-muted-foreground">
-              <Search className="size-5" />
-            </span>
-            <div className="flex flex-col gap-1">
-              <p className="text-base font-semibold text-foreground">No links found</p>
-              <p className="text-sm text-muted-foreground">
-                Nothing matches “{search.trim()}”. Try a different URL or alias.
-              </p>
-            </div>
-            <Button variant="secondary" size="sm" onClick={clearSearch}>
-              Clear search
-            </Button>
+      {pageItems.length === 0 ? (
+        <div className="flex flex-col items-center justify-center gap-3 border-t border-border px-6 py-14 text-center">
+          <Search aria-hidden="true" className="size-5 text-muted-foreground/70" />
+          <div className="flex flex-col gap-1">
+            <p className="font-display text-xl font-medium tracking-[-0.01em] text-foreground">
+              No links found
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Nothing matches “{search.trim()}”. Try a different URL or alias.
+            </p>
           </div>
-        ) : (
-          <>
-            <div className="hidden md:block">
-              <LinksTable items={pageItems} onEdit={setEditing} onDelete={setDeleting} />
-            </div>
-            <div className="flex flex-col gap-3 p-4 md:hidden">
-              {pageItems.map((url) => (
-                <LinkCard
-                  key={url.shortCode}
-                  url={url}
-                  onEdit={setEditing}
-                  onDelete={setDeleting}
-                />
-              ))}
-            </div>
-          </>
-        )}
-
-        <div className="border-t-[0.5px] border-border px-4 py-3">
-          <Pagination
-            page={safePage}
-            totalPages={totalPages}
-            totalElements={filtered.length}
-            onChange={setPage}
-          />
+          <Button variant="secondary" size="sm" onClick={clearSearch}>
+            Clear search
+          </Button>
         </div>
-      </Card>
+      ) : (
+        <>
+          <div className="hidden border-t border-border md:block">
+            <LinksTable items={pageItems} onEdit={setEditing} onDelete={setDeleting} />
+          </div>
+          <div className="divide-y divide-border border-t border-border md:hidden">
+            {pageItems.map((url) => (
+              <LinkCard
+                key={url.shortCode}
+                url={url}
+                onEdit={setEditing}
+                onDelete={setDeleting}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="border-t border-border pt-3">
+        <Pagination
+          page={safePage}
+          totalPages={totalPages}
+          totalElements={filtered.length}
+          onChange={setPage}
+        />
+      </div>
 
       {editing ? (
         <EditLinkDialog
@@ -227,17 +222,13 @@ export function LinkList() {
 
 function SectionHeader({ count }: { count: number | undefined }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
-        <h2 className="text-lg font-bold tracking-tight text-foreground">Your links</h2>
-        <p className="text-sm text-muted-foreground">
-          {count === undefined ? 'Loading…' : `${count} total`}
-        </p>
-      </div>
-      <Button type="button" onClick={() => requestCreateLink()}>
-        <Plus className="size-4" />
-        New link
-      </Button>
+    <div className="flex flex-wrap items-baseline justify-between gap-2">
+      <h2 className="font-display text-2xl font-medium tracking-[-0.02em] text-foreground sm:text-3xl">
+        Your links
+      </h2>
+      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        {count === undefined ? 'Loading…' : `${count} total`}
+      </p>
     </div>
   )
 }
@@ -254,11 +245,11 @@ function Toolbar({
   onRefresh?: () => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b-[0.5px] border-border px-4 py-3">
+    <div className="flex flex-wrap items-center gap-4 border-t border-border py-2.5">
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="Sort links"
-          className="flex h-8 items-center gap-1.5 rounded-md border-[0.5px] border-input bg-background px-3 text-xs font-medium text-foreground shadow-xs transition-colors hover:bg-accent hover:text-accent-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/40"
+          className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/40"
         >
           <ArrowDownUp className="size-3.5" />
           {SORT_LABELS[sort]}
@@ -273,19 +264,21 @@ function Toolbar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      {caption ? <p className="text-xs text-muted-foreground">{caption}</p> : null}
+      {caption ? (
+        <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground/70">
+          {caption}
+        </p>
+      ) : null}
 
       {onRefresh ? (
-        <Button
+        <button
           type="button"
-          variant="ghost"
-          size="icon-sm"
           aria-label="Refresh links"
-          className="ml-auto"
           onClick={onRefresh}
+          className="ml-auto text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/40"
         >
           <RefreshCw className="size-4" />
-        </Button>
+        </button>
       ) : null}
     </div>
   )

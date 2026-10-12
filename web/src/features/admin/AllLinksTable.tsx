@@ -43,7 +43,7 @@ export function AllLinksTable() {
 
   if (isError) {
     return (
-      <div className="rounded-xl border-[0.5px] border-border bg-card p-6">
+      <div className="rounded-xl border border-border bg-card p-6">
         <p className="text-sm text-destructive">{getErrorMessage(error)}</p>
       </div>
     )
@@ -58,7 +58,7 @@ export function AllLinksTable() {
       {data.content.map((url) => (
         <div
           key={url.shortCode}
-          className="flex items-center gap-4 rounded-xl border-[0.5px] border-border bg-card p-4 transition-shadow hover:shadow-soft md:p-5"
+          className="flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition-shadow hover:shadow-soft md:p-5"
         >
           <div className="min-w-0 flex-1">
             <Link

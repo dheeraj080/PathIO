@@ -2,7 +2,11 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from '@/App'
 import { USE_MOCKS } from '@/lib/config'
-import '@fontsource-variable/manrope'
+import '@fontsource-variable/inter'
+import '@fontsource-variable/fraunces'
+import '@fontsource-variable/fraunces/wght-italic.css'
+import '@fontsource-variable/geist'
+import '@fontsource-variable/geist-mono'
 import '@/index.css'
 
 async function enableMocking(): Promise<void> {

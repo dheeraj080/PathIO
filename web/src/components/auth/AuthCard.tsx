@@ -7,7 +7,7 @@ export function AuthCard({ children, className }: { children: ReactNode; classNa
   return (
     <div
       className={cn(
-        'rounded-2xl border-[0.5px] border-border bg-card p-6 shadow-soft sm:p-8',
+        'rounded-2xl border border-border bg-card p-6 shadow-soft sm:p-8',
         className,
       )}
     >

@@ -1,8 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Trophy } from 'lucide-react'
 import { getTopLinks } from '@/api/analytics.api'
-import { Card } from '@/components/ui/Card'
 import { Spinner } from '@/components/ui/Spinner'
 import { CopyShortLinkButton } from '@/features/links/CopyShortLinkButton'
 import { displayUrl, formatCount } from '@/lib/format'
@@ -16,41 +14,37 @@ export function TopLinksList({ limit = 5 }: { limit?: number }) {
   })
 
   return (
-    <Card className="overflow-hidden">
-      <div className="flex items-center justify-between gap-3 border-b-[0.5px] border-border px-5 py-4">
-        <h3 className="flex items-center gap-2 text-base font-bold text-foreground">
-          <Trophy className="size-4 text-primary" />
+    <section className="border-t border-border pt-6">
+      <div className="flex items-baseline justify-between gap-4">
+        <h3 className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           Top links
         </h3>
-        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70">
           By clicks
         </span>
       </div>
 
-      <div className="divide-y divide-border">
+      <div className="mt-2 divide-y divide-border">
         {isLoading ? (
-          <div className="flex items-center justify-center p-10">
+          <div className="flex items-center justify-center py-10">
             <Spinner className="h-5 w-5" />
           </div>
         ) : isError ? (
-          <p className="p-6 text-sm text-destructive">{getErrorMessage(error)}</p>
+          <p className="py-6 text-sm text-destructive">{getErrorMessage(error)}</p>
         ) : !data || data.length === 0 ? (
-          <p className="p-10 text-center text-sm text-muted-foreground">
+          <p className="py-10 text-center text-sm text-muted-foreground">
             No clicks yet. Share a short link to see it here.
           </p>
         ) : (
           data.map((link, index) => (
-            <div
-              key={link.shortCode}
-              className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-accent/50"
-            >
-              <span className="flex size-7 shrink-0 items-center justify-center rounded-md border-[0.5px] border-border bg-muted text-xs font-bold tabular-nums text-muted-foreground">
-                {index + 1}
+            <div key={link.shortCode} className="flex items-center gap-4 py-3">
+              <span className="tnum w-6 shrink-0 font-mono text-xs text-muted-foreground">
+                {String(index + 1).padStart(2, '0')}
               </span>
               <div className="min-w-0 flex-1">
                 <Link
                   to={`/links/${link.shortCode}`}
-                  className="block truncate font-mono text-sm font-semibold text-foreground transition-colors hover:text-primary"
+                  className="block truncate font-mono text-sm text-foreground underline-offset-4 hover:text-primary hover:underline"
                   title={link.longUrl}
                 >
                   /{link.shortCode}
@@ -60,13 +54,13 @@ export function TopLinksList({ limit = 5 }: { limit?: number }) {
                 </p>
               </div>
               <CopyShortLinkButton shortUrl={link.shortUrl} shortCode={link.shortCode} />
-              <span className="w-16 shrink-0 text-right text-sm font-bold tabular-nums text-foreground">
+              <span className="tnum w-12 shrink-0 text-right text-sm font-medium text-foreground">
                 {formatCount(link.clickCount)}
               </span>
             </div>
           ))
         )}
       </div>
-    </Card>
+    </section>
   )
 }

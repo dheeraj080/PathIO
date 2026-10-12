@@ -4,7 +4,10 @@ import { cn } from '@/lib/cn'
 import { copyToClipboard } from '@/lib/format'
 import { useToast } from '@/components/ui/Toast'
 
-/** Compact copy-to-clipboard affordance for a short link, with a brief check state. */
+/**
+ * Copy affordance for a short link. Shows an explicit "Copied" label (also
+ * announced to screen readers) rather than relying on the icon colour alone.
+ */
 export function CopyShortLinkButton({
   shortUrl,
   shortCode,
@@ -35,12 +38,13 @@ export function CopyShortLinkButton({
       aria-label={`Copy /${shortCode}`}
       title="Copy short link"
       className={cn(
-        'flex size-5 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:text-foreground',
-        copied && 'text-success hover:text-success',
+        'inline-flex shrink-0 items-center gap-1 font-mono text-[10px] uppercase tracking-[0.08em] transition-colors',
+        copied ? 'text-success' : 'text-muted-foreground hover:text-foreground',
         className,
       )}
     >
       {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+      <span aria-live="polite">{copied ? 'Copied' : 'Copy'}</span>
     </button>
   )
 }

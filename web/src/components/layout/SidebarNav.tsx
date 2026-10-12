@@ -26,29 +26,45 @@ interface SidebarNavProps {
   collapsed?: boolean
 }
 
+/**
+ * Text-first navigation rail. The wordmark is a plain Fraunces line (no filled
+ * logo tile), a single hairline separates it from the nav, and the active item
+ * is the only place the accent appears.
+ */
 export function SidebarNav({ onNavigate, collapsed = false }: SidebarNavProps) {
   const { isAdmin } = useAuth()
   const items = isAdmin ? [...BASE_NAV, ADMIN_NAV] : BASE_NAV
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col">
       <NavLink
         to="/dashboard"
         onClick={onNavigate}
-        title={collapsed ? 'PathIO' : undefined}
-        className={cn('flex items-center gap-3', collapsed ? 'justify-center px-0' : 'px-1')}
-      >
-        <span className="flex aspect-square size-9 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-          <LayoutDashboard className="size-5" />
-        </span>
-        {collapsed ? null : (
-          <span className="text-lg font-extrabold tracking-tight text-sidebar-foreground">
-            PathIO
-          </span>
+        title="PathIO"
+        aria-label="PathIO dashboard"
+        className={cn(
+          'inline-flex items-baseline gap-2 text-foreground',
+          'outline-none focus-visible:ring-[3px] focus-visible:ring-sidebar-ring/40',
+          collapsed ? 'justify-center' : 'px-2',
         )}
+      >
+        <span className="font-display text-xl font-medium leading-none tracking-[-0.02em]">
+          {collapsed ? (
+            <>
+              P<span className="text-primary">/</span>
+            </>
+          ) : (
+            <>
+              Path<span className="text-primary">/IO</span>
+            </>
+          )}
+        </span>
       </NavLink>
 
-      <nav className="flex flex-col gap-1.5" aria-label="Primary">
+      <nav
+        aria-label="Primary"
+        className="mt-6 flex flex-col gap-0.5 border-t border-sidebar-border pt-4"
+      >
         {items.map((item) => {
           const Icon = item.icon
           return (
@@ -59,29 +75,19 @@ export function SidebarNav({ onNavigate, collapsed = false }: SidebarNavProps) {
               title={collapsed ? item.name : undefined}
               className={({ isActive }) =>
                 cn(
-                  'group relative flex items-center gap-3 rounded-lg py-1.5 transition-colors',
+                  'group flex items-center gap-3 border-l-2 py-2 text-sm transition-colors',
                   'outline-none focus-visible:ring-[3px] focus-visible:ring-sidebar-ring/40',
-                  collapsed ? 'justify-center px-0' : 'px-4',
+                  collapsed ? 'justify-center px-0' : 'px-2',
                   isActive
-                    ? 'bg-sidebar-accent text-sidebar-foreground'
-                    : 'text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground',
+                    ? 'border-primary font-medium text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-sidebar-foreground',
                 )
               }
             >
               {({ isActive }) => (
                 <>
-                  {isActive ? (
-                    <span
-                      aria-hidden="true"
-                      className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-sidebar-primary"
-                    />
-                  ) : null}
-                  <Icon className="size-5 shrink-0" />
-                  {collapsed ? null : (
-                    <span className={cn('text-sm', isActive ? 'font-bold' : 'font-medium')}>
-                      {item.name}
-                    </span>
-                  )}
+                  <Icon className={cn('size-4 shrink-0', isActive && 'text-primary')} />
+                  {collapsed ? null : <span>{item.name}</span>}
                 </>
               )}
             </NavLink>

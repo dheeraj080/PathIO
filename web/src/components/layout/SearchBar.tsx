@@ -1,6 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { Search, XCircle } from 'lucide-react'
-import { Kbd } from '@/components/ui/Kbd'
 import { cn } from '@/lib/cn'
 
 interface SearchBarProps {
@@ -10,21 +9,10 @@ interface SearchBarProps {
   className?: string
 }
 
-/** Rounded search field with a clear affordance and a ⌘K / Ctrl-K focus shortcut. */
+/** Hairline search field with a clear affordance; URLs read in mono. */
 export function SearchBar({ value, onChange, placeholder = 'Search…', className }: SearchBarProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const hasValue = value.length > 0
-
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        inputRef.current?.focus()
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
 
   return (
     <div className={cn('group relative w-full', className)}>
@@ -44,10 +32,10 @@ export function SearchBar({ value, onChange, placeholder = 'Search…', classNam
         }}
         placeholder={placeholder}
         maxLength={2048}
-        className="h-10 w-full truncate rounded-xl border-[0.5px] border-border bg-background py-2 pl-9 pr-10 text-sm text-foreground shadow-none outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring sm:pr-14"
+        className="h-10 w-full truncate rounded-md border border-border bg-transparent py-2 pl-9 pr-10 font-mono text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring"
       />
-      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-        {hasValue ? (
+      {hasValue && (
+        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
           <button
             type="button"
             onClick={() => {
@@ -59,10 +47,8 @@ export function SearchBar({ value, onChange, placeholder = 'Search…', classNam
           >
             <XCircle className="size-4" />
           </button>
-        ) : (
-          <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

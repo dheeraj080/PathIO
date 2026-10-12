@@ -13,7 +13,7 @@ const tabClass = ({ isActive }: { isActive: boolean }) =>
 
 export function AdminNav() {
   return (
-    <nav className="flex gap-6 border-b-[0.5px] border-border">
+    <nav className="flex gap-6 border-b border-border">
       <NavLink to="/admin/users" className={tabClass}>
         Users
       </NavLink>

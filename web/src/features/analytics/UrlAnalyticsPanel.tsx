@@ -6,32 +6,27 @@ import { getClickBreakdown, getClickHistory, getUrlAnalytics } from '@/api/analy
 import { Button } from '@/components/ui/Button'
 import { CopyButton } from '@/components/ui/CopyButton'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { Spinner } from '@/components/ui/Spinner'
 import { AnalyticsCard } from '@/components/analytics/AnalyticsCard'
 import { HistoryChart } from '@/components/charts/HistoryChart'
 import { BreakdownBars } from '@/components/charts/BreakdownBars'
 import { ComparisonBadge } from '@/features/analytics/ComparisonBadge'
+import { CRAWLER_VALUES, deviceLabel, referrerLabel } from '@/features/analytics/labels'
+import { buildDailySeries, sumClicks } from '@/features/analytics/series'
+import { DEFAULT_RANGE, RANGE_OPTIONS, type Range } from '@/features/analytics/ranges'
 import { getErrorMessage } from '@/lib/errors'
 import { displayUrl, formatCount } from '@/lib/format'
 
-const RANGES = [7, 30, 90] as const
-type Range = (typeof RANGES)[number]
-
-const RANGE_TABS = RANGES.map((value) => ({ label: `${value}d`, value: String(value) }))
-
 /** History is fetched for the current period plus the previous one, so the badge can compare. */
 const COMPARISON_PERIODS = 2
-
-function totalClicksOf(points: { clicks: number }[]): number {
-  return points.reduce((total, point) => total + point.clicks, 0)
-}
 
 interface UrlAnalyticsPanelProps {
   shortCode: string
 }
 
 export function UrlAnalyticsPanel({ shortCode }: UrlAnalyticsPanelProps) {
-  const [range, setRange] = useState<Range>(30)
+  const [range, setRange] = useState<Range>(DEFAULT_RANGE)
 
   const summary = useQuery({
     queryKey: ['analytics', 'url', shortCode],
@@ -51,16 +46,16 @@ export function UrlAnalyticsPanel({ shortCode }: UrlAnalyticsPanelProps) {
     retry: false,
   })
 
-  const historyPoints = history.data ?? []
-  const chartData = historyPoints.slice(-range)
-  const previousPoints = historyPoints.slice(0, Math.max(0, historyPoints.length - range))
-  const currentPeriodClicks = totalClicksOf(chartData)
-  const previousPeriodClicks = history.isSuccess ? totalClicksOf(previousPoints) : null
+  const series = history.data ? buildDailySeries(history.data, range * COMPARISON_PERIODS) : []
+  const chartData = series.slice(-range)
+  const previousPoints = series.slice(0, Math.max(0, series.length - range))
+  const currentPeriodClicks = sumClicks(chartData)
+  const previousPeriodClicks = history.isSuccess ? sumClicks(previousPoints) : null
 
   if (summary.isError) {
     return (
       <EmptyState
-        icon={<BarChart3 className="size-6" />}
+        icon={<BarChart3 />}
         title="Analytics unavailable"
         description={getErrorMessage(summary.error)}
         action={
@@ -75,51 +70,63 @@ export function UrlAnalyticsPanel({ shortCode }: UrlAnalyticsPanelProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {summary.data ? (
-        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border-[0.5px] border-border bg-card p-5 sm:p-6">
-          <div className="min-w-0">
-            <p className="truncate font-mono text-sm font-semibold text-foreground">
-              /{summary.data.shortCode}
-            </p>
-            <p className="mt-0.5 truncate text-sm text-muted-foreground" title={summary.data.longUrl}>
-              {displayUrl(summary.data.longUrl, 70)}
-            </p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <CopyButton value={summary.data.shortUrl} />
-            <a href={summary.data.shortUrl} target="_blank" rel="noreferrer">
-              <Button variant="secondary" size="sm">
-                <ExternalLink className="size-4" />
-                Open
-              </Button>
-            </a>
-          </div>
+    <div className="flex flex-col gap-10">
+      <div className="flex flex-col gap-4 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          {summary.data ? (
+            <>
+              <p className="truncate font-mono text-2xl font-medium tracking-[-0.01em] text-foreground">
+                /{summary.data.shortCode}
+              </p>
+              <p
+                className="mt-1 truncate text-sm text-muted-foreground"
+                title={summary.data.longUrl}
+              >
+                {displayUrl(summary.data.longUrl, 70)}
+              </p>
+            </>
+          ) : (
+            <div className="h-8 w-48 animate-pulse rounded-sm bg-muted" />
+          )}
         </div>
-      ) : null}
 
-      <AnalyticsCard
-        tabs={RANGE_TABS}
-        activeTab={String(range)}
-        onTabChange={(value) => setRange(Number(value) as Range)}
-      >
+        <div className="flex flex-wrap items-center gap-2">
+          {summary.data ? (
+            <>
+              <CopyButton value={summary.data.shortUrl} />
+              <a href={summary.data.shortUrl} target="_blank" rel="noreferrer">
+                <Button variant="secondary" size="sm">
+                  <ExternalLink className="size-4" />
+                  Open
+                </Button>
+              </a>
+            </>
+          ) : null}
+          <SegmentedControl
+            ariaLabel="Period"
+            options={RANGE_OPTIONS}
+            value={String(range)}
+            onChange={(value) => setRange(Number(value) as Range)}
+          />
+        </div>
+      </div>
+
+      <AnalyticsCard label="Total clicks">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-              Total clicks
-            </p>
-            <p className="mt-2 text-3xl font-extrabold tabular-nums text-foreground sm:text-4xl">
+            <p className="tnum font-display text-5xl font-medium leading-none tracking-[-0.02em] text-foreground sm:text-6xl">
               {history.isLoading ? (
-                <Spinner className="h-7 w-7" />
+                <Spinner className="h-8 w-8" />
               ) : history.isError ? (
                 '—'
               ) : (
                 currentPeriodClicks.toLocaleString()
               )}
             </p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-3 text-sm text-muted-foreground">
+              Last {range} days ·{' '}
               {summary.isLoading
-                ? 'Loading unique visitors…'
+                ? 'loading unique visitors…'
                 : `${formatCount(summary.data?.uniqueClicks ?? 0)} unique visitors`}
             </p>
           </div>
@@ -130,41 +137,50 @@ export function UrlAnalyticsPanel({ shortCode }: UrlAnalyticsPanelProps) {
           />
         </div>
 
-        <div className="mt-6 h-64">
+        <div className="mt-8">
           {history.isLoading ? (
-            <div className="flex h-full items-center justify-center">
+            <div className="flex h-56 items-center justify-center sm:h-64">
               <Spinner className="h-6 w-6" />
             </div>
           ) : history.isError ? (
             <p className="text-sm text-destructive">{getErrorMessage(history.error)}</p>
-          ) : chartData.length > 0 ? (
-            <HistoryChart data={chartData} />
-          ) : (
-            <p className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              No clicks recorded in this period.
+          ) : currentPeriodClicks === 0 ? (
+            <p className="flex h-56 items-center justify-center text-sm text-muted-foreground sm:h-64">
+              No clicks in this period.
             </p>
+          ) : (
+            <HistoryChart data={chartData} />
           )}
         </div>
       </AnalyticsCard>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <AnalyticsCard title="Referrers">
+      <div className="grid gap-10 md:grid-cols-2">
+        <AnalyticsCard label="Referrers">
           {breakdown.isLoading ? (
             <Spinner className="h-5 w-5" />
           ) : breakdown.isError ? (
             <p className="text-sm text-destructive">{getErrorMessage(breakdown.error)}</p>
           ) : (
-            <BreakdownBars items={breakdown.data?.referrers ?? []} emptyLabel="No referrers yet." />
+            <BreakdownBars
+              items={breakdown.data?.referrers ?? []}
+              emptyLabel="No referrers yet."
+              formatLabel={referrerLabel}
+            />
           )}
         </AnalyticsCard>
 
-        <AnalyticsCard title="Devices">
+        <AnalyticsCard label="Devices">
           {breakdown.isLoading ? (
             <Spinner className="h-5 w-5" />
           ) : breakdown.isError ? (
             <p className="text-sm text-destructive">{getErrorMessage(breakdown.error)}</p>
           ) : (
-            <BreakdownBars items={breakdown.data?.devices ?? []} emptyLabel="No devices yet." />
+            <BreakdownBars
+              items={breakdown.data?.devices ?? []}
+              emptyLabel="No devices yet."
+              formatLabel={deviceLabel}
+              mutedValues={CRAWLER_VALUES}
+            />
           )}
         </AnalyticsCard>
       </div>

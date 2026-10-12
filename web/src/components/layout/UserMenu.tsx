@@ -69,7 +69,7 @@ export function UserMenu() {
           ref={menuRef}
           role="menu"
           className={cn(
-            'absolute right-0 z-40 mt-2 w-56 animate-fade-in overflow-hidden rounded-xl border-[0.5px] border-border bg-popover py-1 text-popover-foreground shadow-soft',
+            'absolute right-0 z-40 mt-2 w-56 animate-fade-in overflow-hidden rounded-xl border border-border bg-popover py-1 text-popover-foreground shadow-soft',
           )}
           onPointerDown={(event) => event.stopPropagation()}
         >

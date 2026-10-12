@@ -81,28 +81,33 @@ export default {
       boxShadow: {
         soft: 'var(--shadow-soft)',
         xs: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+        /* Raised card: hairline top sheen + soft ambient drop (theme-aware). */
+        card: 'var(--shadow-card)',
+        'card-hover': 'var(--shadow-card-hover)',
+        /* Warm orange halo for primary accents. */
+        glow: '0 0 0 1px rgb(var(--primary) / 0.4), 0 10px 30px -10px rgb(var(--primary) / 0.6)',
+        'glow-sm': '0 0 18px -5px rgb(var(--primary) / 0.55)',
       },
       fontFamily: {
-        sans: [
-          'Manrope Variable',
-          'Manrope',
-          'ui-sans-serif',
-          'system-ui',
-          '-apple-system',
-          'Segoe UI',
-          'Roboto',
-          'sans-serif',
-        ],
-        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        /* Resolve through CSS vars so `.landing-theme` can swap in its own
+         * editorial stacks (Fraunces + Geist) without touching the dashboard. */
+        sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
+        mono: ['var(--font-mono)', 'ui-monospace', 'Menlo', 'monospace'],
+        display: ['var(--font-display)', 'Georgia', 'Times New Roman', 'serif'],
       },
       keyframes: {
         'fade-in': {
           from: { opacity: '0', transform: 'translateY(4px)' },
           to: { opacity: '1', transform: 'translateY(0)' },
         },
+        'glow-pulse': {
+          '0%, 100%': { opacity: '0.55' },
+          '50%': { opacity: '0.9' },
+        },
       },
       animation: {
         'fade-in': 'fade-in 150ms ease-out',
+        'glow-pulse': 'glow-pulse 4s ease-in-out infinite',
       },
     },
   },
